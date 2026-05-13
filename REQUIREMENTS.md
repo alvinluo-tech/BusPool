@@ -278,7 +278,7 @@ transactions
 ├── status (pending / confirmed_valid / confirmed_invalid / auto_settled)
 ├── confirmed_at
 ├── created_at
-└── expires_at (24h 自动结算时间)
+└── expires_at (4h 自动结算时间)
 
 appeals
 ├── id (UUID)

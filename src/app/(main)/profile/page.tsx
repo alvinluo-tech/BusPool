@@ -14,17 +14,17 @@ import Icon from "@/components/ui/Icon";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import StarRating from "@/components/ui/StarRating";
 
-function ReputationBadge({ reputation }: { reputation: number }) {
+function ReputationBadge({ reputation, labels }: { reputation: number; labels: Record<string, string> }) {
   if (reputation >= 80) {
-    return <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">Excellent</span>;
+    return <span className="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">{labels.excellent}</span>;
   }
   if (reputation >= 50) {
-    return <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Good</span>;
+    return <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{labels.good}</span>;
   }
   if (reputation >= 30) {
-    return <span className="text-xs font-semibold text-warning bg-warning/10 px-2 py-0.5 rounded-full">Fair</span>;
+    return <span className="text-xs font-semibold text-warning bg-warning/10 px-2 py-0.5 rounded-full">{labels.fair}</span>;
   }
-  return <span className="text-xs font-semibold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">Restricted</span>;
+  return <span className="text-xs font-semibold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">{labels.restricted}</span>;
 }
 
 export default function ProfilePage() {
@@ -101,7 +101,7 @@ export default function ProfilePage() {
           <span className="text-sm text-muted-foreground">{t("reputation")}</span>
           <div className="flex items-center gap-2">
             <StarRating rating={user.reputation} />
-            <ReputationBadge reputation={user.reputation} />
+            <ReputationBadge reputation={user.reputation} labels={{ excellent: t("reputationExcellent"), good: t("reputationGood"), fair: t("reputationFair"), restricted: t("reputationRestricted") }} />
           </div>
         </div>
         <div className="w-full bg-muted rounded-full h-2">
@@ -132,14 +132,14 @@ export default function ProfilePage() {
 
       {/* Primary Menu */}
       <Card className="overflow-hidden !p-0">
-        <Link href="/profile" className="flex items-center gap-3 px-5 py-4 border-b border-border hover:bg-muted transition-colors">
+        <Link href="/reputation" className="flex items-center gap-3 px-5 py-4 border-b border-border hover:bg-muted transition-colors">
           <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
             <Icon name="shield" size={20} className="text-muted-foreground" />
           </div>
-          <span className="flex-1 text-sm font-medium text-foreground">{t("reputation")} System</span>
+          <span className="flex-1 text-sm font-medium text-foreground">{t("reputation")}</span>
           <Icon name="chevron-right" size={20} className="text-muted-foreground" />
         </Link>
-        <Link href="/notifications" className="flex items-center gap-3 px-5 py-4 border-b border-border hover:bg-muted transition-colors">
+        <Link href="/settings/notifications" className="flex items-center gap-3 px-5 py-4 border-b border-border hover:bg-muted transition-colors">
           <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
             <Icon name="bell" size={20} className="text-muted-foreground" />
           </div>

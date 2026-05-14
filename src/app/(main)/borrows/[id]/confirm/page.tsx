@@ -4,12 +4,17 @@ import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { TransactionWithTicket } from "@/types";
+import { QRCodeSVG } from "qrcode.react";
+import type { Transaction, Ticket } from "@/types";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import Icon from "@/components/ui/Icon";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+
+interface TxWithTicket extends Transaction {
+  ticket: Ticket;
+}
 
 export default function ConfirmResultPage() {
   const t = useTranslations("confirm");
@@ -18,7 +23,7 @@ export default function ConfirmResultPage() {
   const router = useRouter();
   const transactionId = params.id as string;
 
-  const [transaction, setTransaction] = useState<TransactionWithTicket | null>(null);
+  const [transaction, setTransaction] = useState<TxWithTicket | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showAlreadyScanned, setShowAlreadyScanned] = useState(false);
@@ -32,7 +37,7 @@ export default function ConfirmResultPage() {
         .select("*, ticket:tickets(*)")
         .eq("id", transactionId)
         .single();
-      setTransaction(data as TransactionWithTicket);
+      setTransaction(data as TxWithTicket);
       setLoading(false);
     };
     fetchTransaction();
@@ -96,14 +101,15 @@ export default function ConfirmResultPage() {
     <div className="max-w-md mx-auto">
       <h1 className="text-xl font-bold text-foreground mb-6">{t("title")}</h1>
 
-      {/* Barcode Preview */}
+      {/* QR Code Preview */}
       <Card className="p-6 mb-6">
-        <div className="w-full aspect-[3/2] bg-muted rounded-xl flex items-center justify-center">
-          {transaction.ticket?.barcode_image_url ? (
-            <img
-              src={transaction.ticket.barcode_image_url}
-              alt="Ticket barcode"
-              className="w-full h-full object-contain rounded-xl"
+        <div className="w-full bg-muted rounded-xl flex flex-col items-center py-6">
+          {transaction.ticket?.qr_code_data ? (
+            <QRCodeSVG
+              value={transaction.ticket.qr_code_data}
+              size={200}
+              level="H"
+              includeMargin
             />
           ) : (
             <span className="text-muted-foreground">{tCommon("error")}</span>

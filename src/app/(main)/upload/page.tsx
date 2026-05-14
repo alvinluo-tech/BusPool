@@ -4,12 +4,12 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { TicketType } from "@/types";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Icon from "@/components/ui/Icon";
-import Badge from "@/components/ui/Badge";
 
 export default function UploadPage() {
   const t = useTranslations("upload");
@@ -20,6 +20,8 @@ export default function UploadPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [decoding, setDecoding] = useState(false);
+  const [qrData, setQrData] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [reputation, setReputation] = useState(85);
   const [todayUploads, setTodayUploads] = useState(0);
@@ -49,14 +51,43 @@ export default function UploadPage() {
     fetchUserData();
   }, []);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhoto(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
+  const decodeBarcode = async (file: File) => {
+    setDecoding(true);
+    setError("");
+    setQrData(null);
+
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const img = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Failed to create canvas context");
+      ctx.drawImage(img, 0, 0);
+      const result = await reader.decodeFromCanvas(canvas);
+      if (result) {
+        setQrData(result.getText());
+      } else {
+        setError(t("decodeFailed"));
+      }
+    } catch {
+      setError(t("decodeFailed"));
+    } finally {
+      setDecoding(false);
     }
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhoto(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    await decodeBarcode(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,6 +95,7 @@ export default function UploadPage() {
     setError("");
 
     if (!photo) { setError(t("photoRequired")); return; }
+    if (!qrData) { setError(t("decodeFailed")); return; }
     if (!confirmed) { setError(t("confirmUsed")); return; }
 
     setLoading(true);
@@ -101,23 +133,24 @@ export default function UploadPage() {
     const fileExt = photo.name.split(".").pop();
     const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
+    // Upload original photo to admin-only bucket
     const { error: uploadError } = await supabase.storage
-      .from("barcodes")
+      .from("ticket-originals")
       .upload(filePath, photo);
 
     if (uploadError) { setError(uploadError.message); setLoading(false); return; }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("barcodes")
-      .getPublicUrl(filePath);
+    // Get the private URL (admin can use this with service key)
+    const originalUrl = `${user.id}/${Date.now()}.${fileExt}`;
 
     const expiresAt = new Date();
     expiresAt.setHours(23, 59, 59, 999);
 
     const { error: insertError } = await supabase.from("tickets").insert({
       uploader_id: user.id,
-      barcode_image_url: publicUrl,
-      barcode_thumbnail_url: publicUrl,
+      barcode_image_url: originalUrl,
+      barcode_thumbnail_url: originalUrl,
+      qr_code_data: qrData,
       ticket_type: ticketType,
       purchase_time: purchaseTime ? new Date(purchaseTime).toISOString() : new Date().toISOString(),
       status: "available",
@@ -160,11 +193,25 @@ export default function UploadPage() {
               />
               <button
                 type="button"
-                onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+                onClick={() => { setPhoto(null); setPhotoPreview(null); setQrData(null); }}
                 className="absolute top-3 right-3 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white"
               >
                 <Icon name="x" size={16} />
               </button>
+              {/* Decode status */}
+              <div className="absolute bottom-3 left-3 right-3">
+                {decoding ? (
+                  <span className="inline-flex items-center gap-1.5 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full">
+                    <Icon name="loader" size={12} className="animate-spin" />
+                    Decoding barcode...
+                  </span>
+                ) : qrData ? (
+                  <span className="inline-flex items-center gap-1.5 bg-success/90 text-white text-xs px-3 py-1.5 rounded-full">
+                    <Icon name="check" size={12} strokeWidth={3} />
+                    Barcode decoded
+                  </span>
+                ) : null}
+              </div>
             </div>
           ) : (
             <label className="block cursor-pointer">
@@ -280,6 +327,7 @@ export default function UploadPage() {
           variant="primary"
           size="lg"
           loading={loading}
+          disabled={!qrData}
           className="w-full"
         >
           <Icon name="check" size={20} />

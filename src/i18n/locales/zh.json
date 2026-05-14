@@ -108,6 +108,7 @@
     "reputationTooLow": "信誉分过低，无法上传（最低 30）",
     "dailyLimit": "已达到每日上传上限（3 张）",
     "photoRequired": "请选择条码照片",
+    "decodeFailed": "条码解码失败，请用更清晰的照片重试。",
     "yourReputation": "你的信誉分",
     "todayUploads": "今日上传"
   },

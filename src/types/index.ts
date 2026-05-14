@@ -55,6 +55,7 @@ export interface Ticket {
   uploader_id: string;
   barcode_image_url: string;
   barcode_thumbnail_url: string | null;
+  qr_code_data: string | null;
   ticket_type: TicketType;
   purchase_time: string;
   status: TicketStatus;

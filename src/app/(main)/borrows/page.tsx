@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { QRCodeSVG } from "qrcode.react";
 import type { Transaction } from "@/types";
 import Card from "@/components/ui/Card";
 import Avatar from "@/components/ui/Avatar";
@@ -16,7 +17,12 @@ import PageHeader from "@/components/ui/PageHeader";
 import { timeAgo } from "@/lib/utils";
 
 interface TransactionWithRelations extends Transaction {
-  ticket?: { ticket_type: string; zone: string | null; uploader?: { nickname: string } | null };
+  ticket?: {
+    ticket_type: string;
+    zone: string | null;
+    qr_code_data: string | null;
+    uploader?: { nickname: string } | null;
+  };
 }
 
 function getTimeRemaining(expiresAt: string): string {
@@ -35,6 +41,7 @@ export default function BorrowsPage() {
   const [active, setActive] = useState<TransactionWithRelations[]>([]);
   const [history, setHistory] = useState<TransactionWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nickname, setNickname] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -42,16 +49,24 @@ export default function BorrowsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get user nickname for watermark
+      const { data: profile } = await supabase
+        .from("users")
+        .select("nickname")
+        .eq("id", user.id)
+        .single();
+      if (profile) setNickname(profile.nickname);
+
       const { data: activeData } = await supabase
         .from("transactions")
-        .select("*, ticket:tickets(ticket_type, zone, uploader:users!tickets_uploader_id_fkey(nickname))")
+        .select("*, ticket:tickets(ticket_type, zone, qr_code_data, uploader:users!tickets_uploader_id_fkey(nickname))")
         .eq("borrower_id", user.id)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
       const { data: historyData } = await supabase
         .from("transactions")
-        .select("*, ticket:tickets(ticket_type, zone, uploader:users!tickets_uploader_id_fkey(nickname))")
+        .select("*, ticket:tickets(ticket_type, zone, qr_code_data, uploader:users!tickets_uploader_id_fkey(nickname))")
         .eq("borrower_id", user.id)
         .neq("status", "pending")
         .order("created_at", { ascending: false });
@@ -110,20 +125,27 @@ export default function BorrowsPage() {
 
             {/* Body */}
             <div className="p-6">
-              {/* Barcode Placeholder */}
-              <div className="bg-muted rounded-xl p-6 mb-4">
-                <div className="flex items-end justify-center gap-[2px] h-20">
-                  {Array.from({ length: 40 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-foreground"
-                      style={{
-                        width: Math.random() > 0.5 ? "2px" : "3px",
-                        height: `${40 + Math.random() * 40}px`,
-                      }}
+              {/* QR Code */}
+              <div className="bg-muted rounded-xl p-6 mb-4 flex flex-col items-center">
+                {activeTicket.ticket?.qr_code_data ? (
+                  <div className="relative">
+                    <QRCodeSVG
+                      value={activeTicket.ticket.qr_code_data}
+                      size={180}
+                      level="H"
+                      includeMargin
                     />
-                  ))}
-                </div>
+                    {/* Watermark */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="text-center opacity-20 rotate-[-20deg]">
+                        <p className="text-foreground text-xs font-mono font-bold">{nickname}</p>
+                        <p className="text-foreground text-[10px] font-mono">{getTimeRemaining(activeTicket.expires_at)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No QR data available</p>
+                )}
                 <p className="text-xs text-muted-foreground text-center mt-3">
                   Show this barcode to the driver
                 </p>

@@ -108,6 +108,7 @@
     "reputationTooLow": "Your reputation is too low to upload (min 30)",
     "dailyLimit": "You've reached the daily upload limit (3 tickets)",
     "photoRequired": "Please select a barcode photo",
+    "decodeFailed": "Failed to decode barcode. Please try again with a clearer photo.",
     "yourReputation": "Your reputation",
     "todayUploads": "Today's uploads"
   },

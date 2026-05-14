@@ -30,7 +30,8 @@ export type IconName =
   | "file-text"
   | "help"
   | "settings"
-  | "mail";
+  | "mail"
+  | "loader";
 
 interface IconProps {
   name: IconName;
@@ -279,6 +280,12 @@ const icons: Record<IconName, { viewBox: string; path: React.ReactNode }> = {
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
         <polyline points="22,6 12,13 2,6" />
       </>
+    ),
+  },
+  loader: {
+    viewBox: "0 0 24 24",
+    path: (
+      <path d="M21 12a9 9 0 11-6.219-8.56" />
     ),
   },
 };

@@ -95,6 +95,7 @@
   --animate-slide-up: slideUp 0.3s ease-out;
   --animate-slide-down: slideDown 0.3s ease-out;
   --animate-scale-in: scaleIn 0.2s ease-out;
+  --animate-slide-in-left: slideInLeft 0.25s ease-out;
   --animate-pulse-soft: pulseSoft 2s ease-in-out infinite;
 }
 
@@ -122,6 +123,11 @@
 @keyframes scaleIn {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
 @keyframes pulseSoft {

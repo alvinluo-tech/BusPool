@@ -39,6 +39,7 @@ yarn-error.log*
 # project docs (personal notes, not code)
 DESIGN.md
 UI-DESIGN.md
+UI-DESIGN-SUPPLEMENT.md
 TEST_ACCOUNTS.md
 docs/
 

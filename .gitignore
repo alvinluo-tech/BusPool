@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# project docs (personal notes, not code)
+DESIGN.md
+UI-DESIGN.md
+TEST_ACCOUNTS.md
+docs/
+
 # local settings
 .claude/settings.local.json
 src/app/.claude/settings.local.json

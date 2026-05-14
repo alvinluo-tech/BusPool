@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
+/* ============================================
+   BusPool Design System — Design Tokens
+   CSS custom properties use --bus- prefix to
+   avoid collision with Tailwind theme tokens.
+   ============================================ */
+
+/* ---- Light Mode ---- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bus-primary: #0066ff;
+  --bus-primary-hover: #0052cc;
+  --bus-primary-foreground: #ffffff;
+  --bus-success: #34c759;
+  --bus-success-foreground: #ffffff;
+  --bus-warning: #ff9500;
+  --bus-warning-foreground: #ffffff;
+  --bus-destructive: #ff3b30;
+  --bus-destructive-foreground: #ffffff;
+  --bus-bg: #ffffff;
+  --bus-card: #ffffff;
+  --bus-muted: #f5f5f7;
+  --bus-foreground: #1c1c1e;
+  --bus-muted-foreground: #8e8e93;
+  --bus-border: #e5e5ea;
+  --bus-chart-1: #10b981;
+  --bus-chart-2: #8b5cf6;
+  --bus-chart-3: #3b82f6;
+  --bus-chart-4: #f59e0b;
+  --bus-chart-5: #ef4444;
+  --bus-shadow-level1: 0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px 0 rgba(0,0,0,0.06);
+  --bus-shadow-level2: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --bus-shadow-level3: 0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --bus-shadow-level4: 0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04);
 }
 
+/* ---- Dark Mode ---- */
+.dark {
+  --bus-primary: #0a84ff;
+  --bus-primary-hover: #3395ff;
+  --bus-primary-foreground: #ffffff;
+  --bus-bg: #000000;
+  --bus-card: #1c1c1e;
+  --bus-muted: #2c2c2e;
+  --bus-foreground: #ffffff;
+  --bus-muted-foreground: #98989d;
+  --bus-border: #38383a;
+  --bus-shadow-level1: 0 1px 3px 0 rgba(0,0,0,0.3), 0 1px 2px 0 rgba(0,0,0,0.2);
+  --bus-shadow-level2: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);
+  --bus-shadow-level3: 0 10px 25px -5px rgba(0,0,0,0.4), 0 10px 10px -5px rgba(0,0,0,0.2);
+  --bus-shadow-level4: 0 20px 25px -5px rgba(0,0,0,0.5), 0 10px 10px -5px rgba(0,0,0,0.2);
+}
+
+/* ---- Tailwind v4 Theme Mapping ---- */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--bus-primary);
+  --color-primary-hover: var(--bus-primary-hover);
+  --color-primary-foreground: var(--bus-primary-foreground);
+  --color-success: var(--bus-success);
+  --color-success-foreground: var(--bus-success-foreground);
+  --color-warning: var(--bus-warning);
+  --color-warning-foreground: var(--bus-warning-foreground);
+  --color-destructive: var(--bus-destructive);
+  --color-destructive-foreground: var(--bus-destructive-foreground);
+  --color-bg: var(--bus-bg);
+  --color-card: var(--bus-card);
+  --color-muted: var(--bus-muted);
+  --color-foreground: var(--bus-foreground);
+  --color-muted-foreground: var(--bus-muted-foreground);
+  --color-border: var(--bus-border);
+  --color-chart-1: var(--bus-chart-1);
+  --color-chart-2: var(--bus-chart-2);
+  --color-chart-3: var(--bus-chart-3);
+  --color-chart-4: var(--bus-chart-4);
+  --color-chart-5: var(--bus-chart-5);
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  --radius-full: 9999px;
+
+  --shadow-level1: var(--bus-shadow-level1);
+  --shadow-level2: var(--bus-shadow-level2);
+  --shadow-level3: var(--bus-shadow-level3);
+  --shadow-level4: var(--bus-shadow-level4);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+
+  --animate-fade-in: fadeIn 0.2s ease-out;
+  --animate-fade-out: fadeOut 0.2s ease-in;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-slide-down: slideDown 0.3s ease-out;
+  --animate-scale-in: scaleIn 0.2s ease-out;
+  --animate-pulse-soft: pulseSoft 2s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---- Keyframes ---- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ---- Base Styles ---- */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bus-bg);
+  color: var(--bus-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

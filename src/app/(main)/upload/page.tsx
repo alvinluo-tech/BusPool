@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BrowserMultiFormatReader } from "@zxing/browser";
@@ -16,15 +16,22 @@ export default function UploadPage() {
   const router = useRouter();
   const [ticketType, setTicketType] = useState<TicketType>("dayrider");
   const [purchaseTime, setPurchaseTime] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [decoding, setDecoding] = useState(false);
-  const [qrData, setQrData] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [reputation, setReputation] = useState(85);
   const [todayUploads, setTodayUploads] = useState(0);
+
+  // Step 1: Scan barcode
+  const [scanning, setScanning] = useState(false);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Step 2: Ticket photo evidence
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -49,53 +56,76 @@ export default function UploadPage() {
       setTodayUploads(count ?? 0);
     };
     fetchUserData();
+
+    return () => { stopCamera(); };
   }, []);
 
-  const decodeBarcode = async (file: File) => {
-    setDecoding(true);
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const startScan = async () => {
+    setCameraError("");
     setError("");
     setQrData(null);
+    setScanning(true);
 
     try {
-      const reader = new BrowserMultiFormatReader();
-      const img = await createImageBitmap(file);
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Failed to create canvas context");
-      ctx.drawImage(img, 0, 0);
-      const result = await reader.decodeFromCanvas(canvas);
-      if (result) {
-        setQrData(result.getText());
-      } else {
-        setError(t("decodeFailed"));
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
-    } catch {
-      setError(t("decodeFailed"));
-    } finally {
-      setDecoding(false);
+
+      const reader = new BrowserMultiFormatReader();
+
+      const result = await reader.decodeOnceFromVideoDevice(undefined, videoRef.current!);
+      setQrData(result.getText());
+      setScanning(false);
+      stopCamera();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Camera error";
+      // Don't treat user cancellation as error
+      if (msg.includes("NotFound") || msg.includes("NotReadable")) {
+        setCameraError(t("cameraUnavailable"));
+      } else if (msg.includes("Permission")) {
+        setCameraError(t("cameraPermission"));
+      } else {
+        // Only show error if not found (scanning just didn't detect yet)
+        setScanning(false);
+        stopCamera();
+        setCameraError(t("scanFailed"));
+      }
     }
   };
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const cancelScan = () => {
+    stopCamera();
+    setScanning(false);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setPhoto(file);
     const reader = new FileReader();
     reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
-
-    await decodeBarcode(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
+    if (!qrData) { setError(t("scanRequired")); return; }
     if (!photo) { setError(t("photoRequired")); return; }
-    if (!qrData) { setError(t("decodeFailed")); return; }
     if (!confirmed) { setError(t("confirmUsed")); return; }
 
     setLoading(true);
@@ -133,23 +163,20 @@ export default function UploadPage() {
     const fileExt = photo.name.split(".").pop();
     const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-    // Upload original photo to admin-only bucket
+    // Upload ticket photo as evidence to admin-only bucket
     const { error: uploadError } = await supabase.storage
       .from("ticket-originals")
       .upload(filePath, photo);
 
     if (uploadError) { setError(uploadError.message); setLoading(false); return; }
 
-    // Get the private URL (admin can use this with service key)
-    const originalUrl = `${user.id}/${Date.now()}.${fileExt}`;
-
     const expiresAt = new Date();
     expiresAt.setHours(23, 59, 59, 999);
 
     const { error: insertError } = await supabase.from("tickets").insert({
       uploader_id: user.id,
-      barcode_image_url: originalUrl,
-      barcode_thumbnail_url: originalUrl,
+      barcode_image_url: filePath,
+      barcode_thumbnail_url: null,
       qr_code_data: qrData,
       ticket_type: ticketType,
       purchase_time: purchaseTime ? new Date(purchaseTime).toISOString() : new Date().toISOString(),
@@ -167,6 +194,9 @@ export default function UploadPage() {
     router.push("/");
   };
 
+  const step1Done = !!qrData;
+  const step2Done = !!photo;
+
   return (
     <div className="max-w-md mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-1">{t("title")}</h1>
@@ -179,60 +209,117 @@ export default function UploadPage() {
           </div>
         )}
 
-        {/* Barcode Photo */}
+        {/* Step 1: Scan Barcode */}
         <div>
-          <label className="block text-sm font-semibold text-foreground mb-3">
-            {t("selectPhoto")}
-          </label>
-          {photoPreview ? (
-            <div className="relative">
-              <img
-                src={photoPreview}
-                alt="Barcode preview"
-                className="w-full aspect-[4/3] object-contain bg-muted rounded-3xl border border-border"
-              />
-              <button
-                type="button"
-                onClick={() => { setPhoto(null); setPhotoPreview(null); setQrData(null); }}
-                className="absolute top-3 right-3 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white"
-              >
-                <Icon name="x" size={16} />
-              </button>
-              {/* Decode status */}
-              <div className="absolute bottom-3 left-3 right-3">
-                {decoding ? (
-                  <span className="inline-flex items-center gap-1.5 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full">
-                    <Icon name="loader" size={12} className="animate-spin" />
-                    Decoding barcode...
-                  </span>
-                ) : qrData ? (
-                  <span className="inline-flex items-center gap-1.5 bg-success/90 text-white text-xs px-3 py-1.5 rounded-full">
-                    <Icon name="check" size={12} strokeWidth={3} />
-                    Barcode decoded
-                  </span>
-                ) : null}
-              </div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              step1Done ? "bg-success text-white" : "bg-primary text-primary-foreground"
+            }`}>
+              {step1Done ? <Icon name="check" size={12} strokeWidth={3} /> : "1"}
             </div>
-          ) : (
-            <label className="block cursor-pointer">
-              <div className="w-full aspect-[4/3] border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-primary transition-colors">
-                <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Icon name="camera" size={28} className="text-primary" />
+            <label className="text-sm font-semibold text-foreground">{t("scanBarcode")}</label>
+            {step1Done && <span className="text-xs text-success font-medium ml-auto">Done</span>}
+          </div>
+
+          <Card className="p-4">
+            {scanning ? (
+              <div className="space-y-3">
+                {/* Camera Viewfinder */}
+                <div className="relative aspect-[4/3] bg-black rounded-xl overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                  {/* Scan frame guide */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-48 h-48 border-2 border-primary/60 rounded-lg" />
+                  </div>
+                  <p className="absolute bottom-3 left-0 right-0 text-center text-white/80 text-xs">
+                    {t("positionBarcode")}
+                  </p>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-foreground">{t("takePhoto")}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t("chooseFromGallery")}</p>
-                </div>
+                <Button type="button" variant="ghost" size="sm" className="w-full" onClick={cancelScan}>
+                  {t("cancelScan")}
+                </Button>
               </div>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhotoChange}
-                className="hidden"
-              />
-            </label>
-          )}
+            ) : step1Done ? (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-success/10 rounded-full flex items-center justify-center shrink-0">
+                  <Icon name="check" size={20} className="text-success" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{t("barcodeScanned")}</p>
+                  <p className="text-xs text-muted-foreground truncate font-mono">{qrData}</p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setQrData(null); }}>
+                  {t("rescan")}
+                </Button>
+              </div>
+            ) : (
+              <div>
+                {cameraError && (
+                  <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg mb-3">{cameraError}</div>
+                )}
+                <Button type="button" variant="outline" size="md" className="w-full" onClick={startScan}>
+                  <Icon name="camera" size={18} />
+                  {t("startScan")}
+                </Button>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Step 2: Upload Ticket Photo */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              step2Done ? "bg-success text-white" : "bg-primary text-primary-foreground"
+            }`}>
+              {step2Done ? <Icon name="check" size={12} strokeWidth={3} /> : "2"}
+            </div>
+            <label className="text-sm font-semibold text-foreground">{t("uploadEvidence")}</label>
+            {step2Done && <span className="text-xs text-success font-medium ml-auto">Done</span>}
+          </div>
+
+          <Card className="p-4">
+            {photoPreview ? (
+              <div className="relative">
+                <img
+                  src={photoPreview}
+                  alt="Ticket evidence"
+                  className="w-full aspect-[4/3] object-contain bg-muted rounded-xl border border-border"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+                  className="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white"
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              </div>
+            ) : (
+              <label className="block cursor-pointer">
+                <div className="w-full aspect-[4/3] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary transition-colors">
+                  <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                    <Icon name="upload" size={18} className="text-muted-foreground" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-foreground">{t("takePhoto")}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("photoAsEvidence")}</p>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </Card>
         </div>
 
         {/* Ticket Type */}
@@ -327,7 +414,7 @@ export default function UploadPage() {
           variant="primary"
           size="lg"
           loading={loading}
-          disabled={!qrData}
+          disabled={!step1Done || !step2Done}
           className="w-full"
         >
           <Icon name="check" size={20} />

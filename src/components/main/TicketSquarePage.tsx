@@ -8,7 +8,6 @@ import type { TicketWithUploader } from "@/types";
 import Card from "@/components/ui/Card";
 import Avatar from "@/components/ui/Avatar";
 import StarRating from "@/components/ui/StarRating";
-import Badge from "@/components/ui/Badge";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";

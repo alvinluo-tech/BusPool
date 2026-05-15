@@ -9,20 +9,20 @@ import Input from "@/components/ui/Input";
 import Icon from "@/components/ui/Icon";
 
 type UserStatus = "all" | "normal" | "restricted" | "banned";
-type RepLevel = "all" | "excellent" | "good" | "average" | "poor";
+type RepLevel = "all" | "excellent" | "good" | "fair" | "restricted";
 
-const STATUS_OPTIONS: { value: UserStatus; label: string }[] = [
-  { value: "all", label: "all" },
-  { value: "normal", label: "正常" },
-  { value: "restricted", label: "受限" },
-  { value: "banned", label: "封禁" },
+const STATUS_OPTIONS: { value: UserStatus; labelKey: string }[] = [
+  { value: "all", labelKey: "all" },
+  { value: "normal", labelKey: "statusNormal" },
+  { value: "restricted", labelKey: "statusRestricted" },
+  { value: "banned", labelKey: "statusBanned" },
 ];
 
-const REP_RANGES: { value: RepLevel; label: string; min?: number; max?: number }[] = [
-  { value: "excellent", label: "优秀(80+)", min: 80 },
-  { value: "good", label: "良好(50-79)", min: 50, max: 79 },
-  { value: "average", label: "一般(30-49)", min: 30, max: 49 },
-  { value: "poor", label: "限制(<30)", max: 29 },
+const REP_RANGES: { value: RepLevel; labelKey: string; min?: number; max?: number }[] = [
+  { value: "excellent", labelKey: "repExcellentRange", min: 80 },
+  { value: "good", labelKey: "repGoodRange", min: 50, max: 79 },
+  { value: "fair", labelKey: "repFairRange", min: 30, max: 49 },
+  { value: "restricted", labelKey: "repRestrictedRange", max: 29 },
 ];
 
 function deriveStatus(rep: number): "normal" | "restricted" | "banned" {
@@ -50,19 +50,10 @@ function RepBadge({ value }: { value: number }) {
 
 function StatusBadge({ status }: { status: string }) {
   const t = useTranslations("admin");
-  const cfg: Record<string, { colors: string; label: string }> = {
-    normal: {
-      colors: "bg-success/10 text-success border-success/20",
-      label: t("正常"),
-    },
-    restricted: {
-      colors: "bg-warning/10 text-warning border-warning/20",
-      label: t("受限"),
-    },
-    banned: {
-      colors: "bg-destructive/10 text-destructive border-destructive/20",
-      label: t("封禁"),
-    },
+  const cfg: Record<string, { colors: string; labelKey: string }> = {
+    normal: { colors: "bg-success/10 text-success border-success/20", labelKey: "statusNormal" },
+    restricted: { colors: "bg-warning/10 text-warning border-warning/20", labelKey: "statusRestricted" },
+    banned: { colors: "bg-destructive/10 text-destructive border-destructive/20", labelKey: "statusBanned" },
   };
 
   const c = cfg[status];
@@ -70,7 +61,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium border ${c.colors}`}>
-      {c.label}
+      {t(c.labelKey)}
     </span>
   );
 }
@@ -125,30 +116,27 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">
-          {t("用户管理")}
+          {t("users")}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {t("查看和管理所有用户")}
+          {t("viewManageUsers")}
         </p>
       </div>
 
-      {/* Filter Card */}
       <div className="bg-card rounded-xl p-4 border border-border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("搜索昵称、邮箱或 ID...")}
+              placeholder={t("searchUserPlaceholder")}
               leftIcon={<Icon name="search" size={16} />}
             />
           </div>
         </div>
 
-        {/* Status pills */}
         <div className="flex gap-2 mt-3 flex-wrap">
           {STATUS_OPTIONS.map((s) => (
             <button
@@ -160,12 +148,11 @@ export default function AdminUsersPage() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               }`}
             >
-              {s.value === "all" ? tCommon("all") : t(s.label)}
+              {s.value === "all" ? tCommon("all") : t(s.labelKey)}
             </button>
           ))}
         </div>
 
-        {/* Reputation pills */}
         <div className="flex gap-2 mt-2 flex-wrap">
           <button
             onClick={() => setRepFilter("all")}
@@ -187,13 +174,12 @@ export default function AdminUsersPage() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               }`}
             >
-              {t(r.label)}
+              {t(r.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
       {loading ? (
         <div className="flex justify-center py-16">
           <Icon name="loader" size={32} className="text-muted-foreground" />
@@ -204,25 +190,25 @@ export default function AdminUsersPage() {
             <thead className="border-b border-border">
               <tr>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("用户")}
+                  {t("user")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("信誉分")}
+                  {t("reputation")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("积分")}
+                  {t("points")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("统计")}
+                  {t("stats")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("状态")}
+                  {t("status")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("注册时间")}
+                  {t("registrationDate")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("操作")}
+                  {t("actions")}
                 </th>
               </tr>
             </thead>
@@ -233,7 +219,7 @@ export default function AdminUsersPage() {
                     colSpan={7}
                     className="text-center py-12 text-sm text-muted-foreground"
                   >
-                    {t("暂无符合条件的用户")}
+                    {t("noUsersFound")}
                   </td>
                 </tr>
               ) : (
@@ -308,7 +294,7 @@ export default function AdminUsersPage() {
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                           >
                             <Icon name="chevron-right" size={16} />
-                            {t("查看")}
+                            {t("view")}
                           </Link>
                         </div>
                       </td>

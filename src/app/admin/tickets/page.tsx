@@ -34,20 +34,20 @@ const STATUS_OPTIONS: { value: StatusFilter; labelKey: string }[] = [
   { value: "invalid", labelKey: "statusInvalid" },
 ];
 
-const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "dayrider", label: "Dayrider" },
-  { value: "daysaver", label: "DaySaver" },
+const TYPE_OPTIONS: { value: TypeFilter; labelKey: string }[] = [
+  { value: "all", labelKey: "all" },
+  { value: "dayrider", labelKey: "dayrider" },
+  { value: "daysaver", labelKey: "daysaver" },
 ];
 
 function TicketStatusBadge({ status }: { status: string }) {
   const t = useTranslations("admin");
-  const cfg: Record<string, { colors: string; label: string }> = {
-    available: { colors: "bg-success/10 text-success", label: t("可用") },
-    in_use: { colors: "bg-blue-500/10 text-blue-600", label: t("使用中") },
-    completed: { colors: "bg-muted text-muted-foreground", label: t("已完成") },
-    expired: { colors: "bg-warning/10 text-warning", label: t("已过期") },
-    invalid: { colors: "bg-destructive/10 text-destructive", label: t("已失效") },
+  const cfg: Record<string, { colors: string; labelKey: string }> = {
+    available: { colors: "bg-success/10 text-success", labelKey: "statusAvailable" },
+    in_use: { colors: "bg-blue-500/10 text-blue-600", labelKey: "statusInUse" },
+    completed: { colors: "bg-muted text-muted-foreground", labelKey: "statusCompleted" },
+    expired: { colors: "bg-warning/10 text-warning", labelKey: "statusExpired" },
+    invalid: { colors: "bg-destructive/10 text-destructive", labelKey: "statusInvalid" },
   };
 
   const c = cfg[status];
@@ -55,13 +55,14 @@ function TicketStatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${c.colors}`}>
-      {c.label}
+      {t(c.labelKey)}
     </span>
   );
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const label = type === "dayrider" ? "Dayrider" : "DaySaver";
+  const t = useTranslations("ticket");
+  const label = t(type === "dayrider" ? "dayrider" : "daysaver");
   return (
     <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium border border-border bg-muted/50 text-foreground">
       {label}
@@ -89,6 +90,7 @@ function RepBadge({ value }: { value: number }) {
 export default function AdminTicketsPage() {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
+  const tTicket = useTranslations("ticket");
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -121,30 +123,27 @@ export default function AdminTicketsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">
-          {t("票务管理")}
+          {t("tickets")}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {t("查看和管理所有票务")}
+          {t("viewManageTickets")}
         </p>
       </div>
 
-      {/* Filter Card */}
       <div className="bg-card rounded-xl p-4 border border-border">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("搜索票 ID...")}
+              placeholder={t("searchTicketPlaceholder")}
               leftIcon={<Icon name="search" size={16} />}
             />
           </div>
         </div>
 
-        {/* Status pills */}
         <div className="flex gap-2 mt-3 flex-wrap">
           {STATUS_OPTIONS.map((s) => (
             <button
@@ -161,7 +160,6 @@ export default function AdminTicketsPage() {
           ))}
         </div>
 
-        {/* Type pills */}
         <div className="flex gap-2 mt-2 flex-wrap">
           {TYPE_OPTIONS.map((ty) => (
             <button
@@ -173,13 +171,12 @@ export default function AdminTicketsPage() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               }`}
             >
-              {ty.value === "all" ? tCommon("all") : ty.label}
+              {ty.value === "all" ? tCommon("all") : tTicket(ty.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
       {loading ? (
         <div className="flex justify-center py-16">
           <Icon name="loader" size={32} className="text-muted-foreground" />
@@ -190,28 +187,28 @@ export default function AdminTicketsPage() {
             <thead className="border-b border-border">
               <tr>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("票 ID")}
+                  {t("ticketId")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("上传者")}
+                  {t("uploader")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("类型")}
+                  {t("type")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("状态")}
+                  {t("status")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("借用次数")}
+                  {t("borrowCount")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("上传时间")}
+                  {t("uploadTime")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("过期时间")}
+                  {t("expiryTime")}
                 </th>
                 <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("操作")}
+                  {t("actions")}
                 </th>
               </tr>
             </thead>
@@ -222,7 +219,7 @@ export default function AdminTicketsPage() {
                     colSpan={8}
                     className="text-center py-12 text-sm text-muted-foreground"
                   >
-                    {t("暂无符合条件的票务")}
+                    {t("noTicketsFound")}
                   </td>
                 </tr>
               ) : (
@@ -246,7 +243,7 @@ export default function AdminTicketsPage() {
                         </div>
                       ) : (
                         <span className="text-sm text-muted-foreground">
-                          {t("未知")}
+                          {t("unknown")}
                         </span>
                       )}
                     </td>
@@ -257,9 +254,7 @@ export default function AdminTicketsPage() {
                       <TicketStatusBadge status={ticket.status} />
                     </td>
                     <td className="p-4">
-                      <span className="text-sm text-muted-foreground">
-                        0
-                      </span>
+                      <span className="text-sm text-muted-foreground">0</span>
                     </td>
                     <td className="p-4">
                       <span className="text-sm text-muted-foreground whitespace-nowrap">
@@ -278,7 +273,7 @@ export default function AdminTicketsPage() {
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                         >
                           <Icon name="chevron-right" size={16} />
-                          {t("查看")}
+                          {t("view")}
                         </Link>
                       </div>
                     </td>

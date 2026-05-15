@@ -7,8 +7,6 @@ import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 
-/* ---------- mock data ---------- */
-
 const mockTicket = {
   id: "tkt_001",
   ticket_type: "dayrider",
@@ -48,16 +46,14 @@ const mockBorrowRecords = [
   },
 ];
 
-/* ---------- badge helpers ---------- */
-
 function TicketStatusBadge({ status }: { status: string }) {
   const t = useTranslations("admin");
-  const cfg: Record<string, { colors: string; label: string }> = {
-    available: { colors: "bg-success/10 text-success", label: t("可用") },
-    in_use: { colors: "bg-blue-500/10 text-blue-600", label: t("使用中") },
-    completed: { colors: "bg-muted text-muted-foreground", label: t("已完成") },
-    expired: { colors: "bg-warning/10 text-warning", label: t("已过期") },
-    invalid: { colors: "bg-destructive/10 text-destructive", label: t("已失效") },
+  const cfg: Record<string, { colors: string; labelKey: string }> = {
+    available: { colors: "bg-success/10 text-success", labelKey: "statusAvailable" },
+    in_use: { colors: "bg-blue-500/10 text-blue-600", labelKey: "statusInUse" },
+    completed: { colors: "bg-muted text-muted-foreground", labelKey: "statusCompleted" },
+    expired: { colors: "bg-warning/10 text-warning", labelKey: "statusExpired" },
+    invalid: { colors: "bg-destructive/10 text-destructive", labelKey: "statusInvalid" },
   };
 
   const c = cfg[status];
@@ -65,16 +61,16 @@ function TicketStatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${c.colors}`}>
-      {c.label}
+      {t(c.labelKey)}
     </span>
   );
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const label = type === "dayrider" ? "Dayrider" : "DaySaver";
+  const t = useTranslations("ticket");
   return (
     <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium border border-border bg-muted/50 text-foreground">
-      {label}
+      {t(type === "dayrider" ? "dayrider" : "daysaver")}
     </span>
   );
 }
@@ -98,11 +94,11 @@ function RepBadge({ value }: { value: number }) {
 
 function BorrowStatusBadge({ status }: { status: string }) {
   const t = useTranslations("admin");
-  const cfg: Record<string, { colors: string; label: string }> = {
-    pending: { colors: "bg-warning/10 text-warning", label: t("待确认") },
-    confirmed_valid: { colors: "bg-success/10 text-success", label: t("已验证有效") },
-    confirmed_invalid: { colors: "bg-destructive/10 text-destructive", label: t("已验证无效") },
-    auto_settled: { colors: "bg-muted text-muted-foreground", label: t("自动结算") },
+  const cfg: Record<string, { colors: string; labelKey: string }> = {
+    pending: { colors: "bg-warning/10 text-warning", labelKey: "statusPending" },
+    confirmed_valid: { colors: "bg-success/10 text-success", labelKey: "statusConfirmedValid" },
+    confirmed_invalid: { colors: "bg-destructive/10 text-destructive", labelKey: "statusConfirmedInvalid" },
+    auto_settled: { colors: "bg-muted text-muted-foreground", labelKey: "statusAutoSettled" },
   };
 
   const c = cfg[status];
@@ -110,12 +106,10 @@ function BorrowStatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${c.colors}`}>
-      {c.label}
+      {t(c.labelKey)}
     </span>
   );
 }
-
-/* ---------- remove dialog ---------- */
 
 function RemoveTicketDialog({
   open,
@@ -133,11 +127,11 @@ function RemoveTicketDialog({
 
   const handleSubmit = () => {
     if (reason.trim().length < 10) {
-      setError(t("原因至少 10 个字符"));
+      setError(t("reasonMinChars"));
       return;
     }
     setError("");
-    alert(t("票务已强制下架"));
+    alert(t("ticketRemoved"));
     setReason("");
     onClose();
   };
@@ -146,15 +140,15 @@ function RemoveTicketDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2">
         <h3 className="text-lg font-semibold text-foreground mb-2">
-          {t("强制下架票务")}
+          {t("forceRemoveTicket")}
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          {t("此操作将强制下架该票务，下架后用户将无法继续借出此票。请填写下架原因。")}
+          {t("forceRemoveDesc")}
         </p>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              {t("下架原因")}
+              {t("removalReason")}
             </label>
             <textarea
               value={reason}
@@ -162,7 +156,7 @@ function RemoveTicketDialog({
                 setReason(e.target.value);
                 setError("");
               }}
-              placeholder={t("请输入下架原因（至少 10 个字符）")}
+              placeholder={t("removalReasonPlaceholder")}
               rows={3}
               className="w-full px-3 py-2 text-base bg-card border border-border rounded-lg outline-none text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none"
             />
@@ -174,15 +168,13 @@ function RemoveTicketDialog({
             {tCommon("cancel")}
           </Button>
           <Button variant="destructive" size="md" onClick={handleSubmit}>
-            {t("确认下架")}
+            {t("confirmRemove")}
           </Button>
         </div>
       </div>
     </div>
   );
 }
-
-/* ---------- page ---------- */
 
 export default function AdminTicketDetailPage() {
   const t = useTranslations("admin");
@@ -193,61 +185,55 @@ export default function AdminTicketDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <Link
           href="/admin/tickets"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
         >
           <Icon name="chevron-left" size={16} />
-          {t("返回票务列表")}
+          {t("backToTickets")}
         </Link>
         <h1 className="text-2xl font-semibold text-foreground">
-          {t("票务详情")}
+          {t("ticketDetail")}
         </h1>
       </div>
 
-      {/* Top Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* A. Ticket Info Card */}
         <Card className="lg:col-span-2 p-6 rounded-xl space-y-6" padding={false}>
-          {/* Top row: ID + status + type */}
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-xl font-semibold text-foreground">
-              {t("票 #")}{ticket.id.slice(0, 8)}
+              {t("ticketHash")}{ticket.id.slice(0, 8)}
             </h2>
             <TicketStatusBadge status={ticket.status} />
             <TypeBadge type={ticket.ticket_type} />
           </div>
 
-          {/* Detail grid */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
             <div>
-              <p className="text-xs text-muted-foreground">{t("购买时间")}</p>
+              <p className="text-xs text-muted-foreground">{t("purchaseTime")}</p>
               <p className="text-sm text-foreground mt-0.5">
                 {new Date(ticket.purchase_time).toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{t("过期时间")}</p>
+              <p className="text-xs text-muted-foreground">{t("expiryTime")}</p>
               <p className="text-sm text-foreground mt-0.5">
                 {new Date(ticket.expires_at).toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{t("区域")}</p>
+              <p className="text-xs text-muted-foreground">{t("zone")}</p>
               <p className="text-sm text-foreground mt-0.5">{ticket.zone}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{t("借用次数")}</p>
+              <p className="text-xs text-muted-foreground">{t("borrowCount")}</p>
               <p className="text-sm text-foreground mt-0.5">{ticket.borrow_count}</p>
             </div>
           </div>
 
-          {/* Uploader section */}
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-3">
-              {t("上传者信息")}
+              {t("uploaderInfo")}
             </h3>
             <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium shrink-0 text-lg">
@@ -267,24 +253,22 @@ export default function AdminTicketDetailPage() {
             </div>
           </div>
 
-          {/* Barcode photo placeholder */}
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-3">
-              {t("条码照片")}
+              {t("barcodePhoto")}
             </h3>
             <div className="aspect-video bg-muted/50 rounded-lg flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <Icon name="camera" size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">{t("条码照片预览")}</p>
+                <p className="text-sm">{t("barcodePreview")}</p>
               </div>
             </div>
           </div>
         </Card>
 
-        {/* B. Admin Actions Card */}
         <Card className="p-6 rounded-xl" padding={false}>
           <h3 className="text-base font-semibold text-foreground mb-4">
-            {t("管理员操作")}
+            {t("adminActions")}
           </h3>
           <div className="space-y-3">
             <Button
@@ -294,20 +278,19 @@ export default function AdminTicketDetailPage() {
               onClick={() => setShowRemoveDialog(true)}
             >
               <Icon name="alert" size={16} />
-              {t("强制下架票务")}
+              {t("forceRemoveTicket")}
             </Button>
           </div>
         </Card>
       </div>
 
-      {/* Borrow Records Card */}
       <Card className="p-6 rounded-xl" padding={false}>
         <h3 className="text-base font-semibold text-foreground mb-4">
-          {t("借用记录")}
+          {t("borrowRecords")}
         </h3>
         {records.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            {t("暂无借用记录")}
+            {t("noBorrowRecords")}
           </p>
         ) : (
           <div className="space-y-1">
@@ -346,7 +329,6 @@ export default function AdminTicketDetailPage() {
         )}
       </Card>
 
-      {/* Remove Dialog */}
       <RemoveTicketDialog
         open={showRemoveDialog}
         onClose={() => setShowRemoveDialog(false)}

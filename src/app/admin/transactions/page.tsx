@@ -10,22 +10,10 @@ import Icon from "@/components/ui/Icon";
 const statuses = ["all", "pending", "confirmed_valid", "confirmed_invalid", "auto_settled"] as const;
 
 const statusConfig: Record<string, { labelKey: string; classes: string }> = {
-  pending: {
-    labelKey: "statusPending",
-    classes: "bg-warning/10 text-warning border-warning/20",
-  },
-  confirmed_valid: {
-    labelKey: "statusConfirmedValid",
-    classes: "bg-success/10 text-success border-success/20",
-  },
-  confirmed_invalid: {
-    labelKey: "statusConfirmedInvalid",
-    classes: "bg-destructive/10 text-destructive border-destructive/20",
-  },
-  auto_settled: {
-    labelKey: "statusAutoSettled",
-    classes: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  },
+  pending: { labelKey: "statusPending", classes: "bg-warning/10 text-warning border-warning/20" },
+  confirmed_valid: { labelKey: "statusConfirmedValid", classes: "bg-success/10 text-success border-success/20" },
+  confirmed_invalid: { labelKey: "statusConfirmedInvalid", classes: "bg-destructive/10 text-destructive border-destructive/20" },
+  auto_settled: { labelKey: "statusAutoSettled", classes: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
 };
 
 export default function AdminTransactionsPage() {
@@ -40,15 +28,8 @@ export default function AdminTransactionsPage() {
     const supabase = createClient();
     const fetchTransactions = async () => {
       setLoading(true);
-      let query = supabase
-        .from("transactions")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
+      let query = supabase.from("transactions").select("*").order("created_at", { ascending: false });
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
       const { data } = await query;
       setTransactions(data || []);
       setLoading(false);
@@ -67,24 +48,15 @@ export default function AdminTransactionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">{t("transactions")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          View and manage all point transactions
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{t("viewManageTransactions")}</p>
       </div>
 
-      {/* Filter Card */}
       <div className="bg-card border border-border rounded-xl shadow-level1">
         <div className="p-4 space-y-4">
-          {/* Search Input */}
           <div className="relative">
-            <Icon
-              name="search"
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
+            <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
@@ -94,16 +66,13 @@ export default function AdminTransactionsPage() {
             />
           </div>
 
-          {/* Status Filter Pills */}
           <div className="flex gap-2 flex-wrap">
             {statuses.map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  statusFilter === s
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  statusFilter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                 }`}
               >
                 {s === "all" ? tCommon("all") : t(statusConfig[s].labelKey)}
@@ -113,93 +82,44 @@ export default function AdminTransactionsPage() {
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="bg-card border border-border rounded-xl shadow-level1 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">
-            {tCommon("noResults")}
-          </div>
+          <div className="text-center py-12 text-muted-foreground text-sm">{tCommon("noResults")}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Transaction ID
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Ticket ID
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Uploader
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Borrower
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    {t("pointsAmount")}
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Status
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Created
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Action
-                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("transactionId")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("ticketId")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("uploader")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("borrower")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("pointsAmount")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("created")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("action")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((tx) => {
                   const cfg = statusConfig[tx.status] || statusConfig.pending;
                   return (
-                    <tr
-                      key={tx.id}
-                      className="hover:bg-muted/50 transition-colors"
-                    >
+                    <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="p-4"><span className="font-mono text-sm text-foreground">{tx.id.slice(0, 8)}</span></td>
+                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{tx.ticket_id.slice(0, 8)}</span></td>
+                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">&mdash;</span></td>
+                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{tx.borrower_id.slice(0, 12)}</span></td>
+                      <td className="p-4"><span className="font-semibold text-primary">{tx.points_amount > 0 ? "+" : ""}{tx.points_amount}</span></td>
                       <td className="p-4">
-                        <span className="font-mono text-sm text-foreground">
-                          {tx.id.slice(0, 8)}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {tx.ticket_id.slice(0, 8)}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm text-muted-foreground">
-                          &mdash;
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {tx.borrower_id.slice(0, 12)}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-semibold text-primary">
-                          {tx.points_amount > 0 ? "+" : ""}
-                          {tx.points_amount}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}
-                        >
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>
                           {t(cfg.labelKey)}
                         </span>
                       </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {new Date(tx.created_at).toLocaleDateString()}
-                        </span>
-                      </td>
+                      <td className="p-4"><span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(tx.created_at).toLocaleDateString()}</span></td>
                       <td className="p-4">
                         <Link
                           href={`/admin/transactions/${tx.id}`}

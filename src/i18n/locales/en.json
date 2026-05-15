@@ -327,6 +327,7 @@
   },
   "admin": {
     "dashboard": "Dashboard",
+    "dashboardSubtitle": "Platform overview and key metrics",
     "users": "Users",
     "tickets": "Tickets",
     "transactions": "Transactions",

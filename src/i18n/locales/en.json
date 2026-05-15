@@ -328,6 +328,8 @@
   "admin": {
     "dashboard": "Dashboard",
     "dashboardSubtitle": "Platform overview and key metrics",
+    "unauthorized": "Access Denied",
+    "unauthorizedDesc": "You do not have permission to access the admin panel.",
     "users": "Users",
     "tickets": "Tickets",
     "transactions": "Transactions",

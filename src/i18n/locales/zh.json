@@ -328,6 +328,8 @@
   "admin": {
     "dashboard": "数据看板",
     "dashboardSubtitle": "平台运营概况与关键指标",
+    "unauthorized": "无访问权限",
+    "unauthorizedDesc": "你没有访问管理后台的权限。",
     "users": "用户管理",
     "tickets": "票务管理",
     "transactions": "交易管理",

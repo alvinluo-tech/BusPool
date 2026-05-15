@@ -7,6 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 import type { Transaction } from "@/types";
 import Icon from "@/components/ui/Icon";
 
+interface JoinedTx extends Transaction {
+  ticket: { uploader: { nickname: string } | null } | null;
+  borrower: { nickname: string } | null;
+}
+
 const statuses = ["all", "pending", "confirmed_valid", "confirmed_invalid", "auto_settled"] as const;
 
 const statusConfig: Record<string, { labelKey: string; classes: string }> = {
@@ -19,7 +24,7 @@ const statusConfig: Record<string, { labelKey: string; classes: string }> = {
 export default function AdminTransactionsPage() {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<JoinedTx[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,10 +33,13 @@ export default function AdminTransactionsPage() {
     const supabase = createClient();
     const fetchTransactions = async () => {
       setLoading(true);
-      let query = supabase.from("transactions").select("*").order("created_at", { ascending: false });
+      let query = supabase
+        .from("transactions")
+        .select("*, ticket:tickets!inner(uploader:users!tickets_uploader_id_fkey(nickname)), borrower:users!transactions_borrower_id_fkey(nickname)")
+        .order("created_at", { ascending: false });
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
       const { data } = await query;
-      setTransactions(data || []);
+      setTransactions((data || []) as unknown as JoinedTx[]);
       setLoading(false);
     };
     fetchTransactions();
@@ -111,8 +119,8 @@ export default function AdminTransactionsPage() {
                     <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
                       <td className="p-4"><span className="font-mono text-sm text-foreground">{tx.id.slice(0, 8)}</span></td>
                       <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{tx.ticket_id.slice(0, 8)}</span></td>
-                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">&mdash;</span></td>
-                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{tx.borrower_id.slice(0, 12)}</span></td>
+                      <td className="p-4"><span className="text-sm text-muted-foreground">{tx.ticket?.uploader?.nickname || t("unknown")}</span></td>
+                      <td className="p-4"><span className="text-sm text-muted-foreground">{tx.borrower?.nickname || tx.borrower_id.slice(0, 12)}</span></td>
                       <td className="p-4"><span className="font-semibold text-primary">{tx.points_amount > 0 ? "+" : ""}{tx.points_amount}</span></td>
                       <td className="p-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>

@@ -96,6 +96,7 @@ export default function AdminTicketsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [borrowCounts, setBorrowCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -103,8 +104,23 @@ export default function AdminTicketsPage() {
       .from("tickets")
       .select("*, uploader:users!tickets_uploader_id_fkey(nickname, reputation)")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setTickets((data || []) as unknown as TicketRow[]);
+      .then(async ({ data }) => {
+        const ticketData = (data || []) as unknown as TicketRow[];
+        setTickets(ticketData);
+
+        if (ticketData.length > 0) {
+          const ticketIds = ticketData.map((t) => t.id);
+          const { data: txData } = await supabase
+            .from("transactions")
+            .select("ticket_id")
+            .in("ticket_id", ticketIds);
+          const counts: Record<string, number> = {};
+          for (const tx of txData || []) {
+            counts[tx.ticket_id] = (counts[tx.ticket_id] || 0) + 1;
+          }
+          setBorrowCounts(counts);
+        }
+
         setLoading(false);
       });
   }, []);
@@ -254,7 +270,7 @@ export default function AdminTicketsPage() {
                       <TicketStatusBadge status={ticket.status} />
                     </td>
                     <td className="p-4">
-                      <span className="text-sm text-muted-foreground">0</span>
+                      <span className="text-sm text-muted-foreground">{borrowCounts[ticket.id] || 0}</span>
                     </td>
                     <td className="p-4">
                       <span className="text-sm text-muted-foreground whitespace-nowrap">

@@ -8,6 +8,16 @@ import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 
+interface JoinedAppeal extends Appeal {
+  appellant: { nickname: string; email: string } | null;
+  transaction: {
+    ticket_id: string;
+    borrower_id: string;
+    ticket: { id: string; uploader: { nickname: string } | null } | null;
+    borrower: { nickname: string } | null;
+  } | null;
+}
+
 const statuses = ["all", "pending", "resolved", "rejected"] as const;
 
 const statusConfig: Record<string, { labelKey: string; classes: string }> = {
@@ -16,38 +26,52 @@ const statusConfig: Record<string, { labelKey: string; classes: string }> = {
   rejected: { labelKey: "statusRejected", classes: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
-function resolveLabel(s: string, tAdmin: (k: string) => string, tAppeals: (k: string) => string): string {
-  if (s === "pending") return tAppeals("statusPending");
-  if (s === "resolved") return tAppeals("statusResolved");
-  if (s === "rejected") return tAppeals("statusRejected");
-  return tAdmin(s) || s;
-}
-
 export default function AdminAppealsPage() {
   const t = useTranslations("admin");
   const tAppeals = useTranslations("appeals");
   const tCommon = useTranslations("common");
 
-  const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [appeals, setAppeals] = useState<JoinedAppeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const [reviewOpen, setReviewOpen] = useState(false);
   const [currentAppeal, setCurrentAppeal] = useState<Appeal | null>(null);
-  const [reviewDecision, setReviewDecision] = useState<string>("resolve");
+  const [reviewDecision, setReviewDecision] = useState("resolve");
   const [reviewNote, setReviewNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadAppeals = async () => {
+    const supabase = createClient();
+    setLoading(true);
+    let query = supabase
+      .from("appeals")
+      .select("*, appellant:users!appeals_appellant_id_fkey(nickname, email)")
+      .order("created_at", { ascending: false });
+    if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    const { data } = await query;
+
+    const raw = (data || []) as unknown as JoinedAppeal[];
+
+    // Fetch transaction info for each appeal
+    const enriched = await Promise.all(
+      raw.map(async (a) => {
+        const { data: txData } = await supabase
+          .from("transactions")
+          .select("*, ticket:tickets!inner(id, uploader:users!tickets_uploader_id_fkey(nickname)), borrower:users!transactions_borrower_id_fkey(nickname)")
+          .eq("id", a.transaction_id)
+          .single();
+        return { ...a, transaction: (txData as unknown as JoinedAppeal["transaction"]) || null };
+      }),
+    );
+
+    setAppeals(enriched);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const supabase = createClient();
-    const fetchAppeals = async () => {
-      setLoading(true);
-      let query = supabase.from("appeals").select("*").order("created_at", { ascending: false });
-      if (statusFilter !== "all") query = query.eq("status", statusFilter);
-      const { data } = await query;
-      setAppeals(data || []);
-      setLoading(false);
-    };
-    fetchAppeals();
+    loadAppeals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const handleReview = (appeal: Appeal) => {
@@ -57,18 +81,21 @@ export default function AdminAppealsPage() {
     setReviewOpen(true);
   };
 
-  const handleSubmitReview = () => {
+  const handleSubmitReview = async () => {
     if (!currentAppeal || reviewNote.length < 10) return;
-    setAppeals((prev) =>
-      prev.map((a) =>
-        a.id === currentAppeal.id
-          ? { ...a, status: reviewDecision === "resolve" ? ("resolved" as const) : ("rejected" as const), admin_note: reviewNote }
-          : a
-      )
-    );
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("admin_review_appeal", {
+      p_appeal_id: currentAppeal.id,
+      p_decision: reviewDecision,
+      p_admin_note: reviewNote.trim(),
+    });
+    setSubmitting(false);
+    if (error) { alert(error.message); return; }
     setReviewOpen(false);
     setCurrentAppeal(null);
     setReviewNote("");
+    loadAppeals();
   };
 
   return (
@@ -88,7 +115,7 @@ export default function AdminAppealsPage() {
                 statusFilter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               }`}
             >
-              {s === "all" ? tCommon("all") : resolveLabel(s, t, tAppeals)}
+              {s === "all" ? tCommon("all") : t(statusConfig[s]?.labelKey || s)}
             </button>
           ))}
         </div>
@@ -104,6 +131,7 @@ export default function AdminAppealsPage() {
         <div className="space-y-4">
           {appeals.map((appeal) => {
             const cfg = statusConfig[appeal.status] || statusConfig.pending;
+            const tx = appeal.transaction;
             return (
               <div key={appeal.id} className="bg-card border border-border rounded-xl shadow-level1 overflow-hidden">
                 <div className="p-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -111,14 +139,14 @@ export default function AdminAppealsPage() {
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-semibold text-foreground">Appeal #{appeal.id.slice(0, 8)}</span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>
-                        {resolveLabel(appeal.status, t, tAppeals)}
+                        {t(cfg.labelKey)}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
                       <div>
                         <span className="text-muted-foreground">{t("appellantLabel")}</span>{" "}
-                        <span className="text-foreground font-mono text-xs">{appeal.appellant_id.slice(0, 12)}</span>
+                        <span className="text-foreground">{appeal.appellant?.nickname || appeal.appellant_id.slice(0, 12)}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">{t("transactionLabel")}</span>{" "}
@@ -126,11 +154,11 @@ export default function AdminAppealsPage() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">{t("ticketLabel")}</span>{" "}
-                        <span className="text-foreground font-mono text-xs">&mdash;</span>
+                        <span className="text-foreground font-mono text-xs">{tx?.ticket_id?.slice(0, 12) || "—"}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">{t("borrowerLabel")}</span>{" "}
-                        <span className="text-foreground font-mono text-xs">&mdash;</span>
+                        <span className="text-foreground">{tx?.borrower?.nickname || "—"}</span>
                       </div>
                     </div>
 
@@ -213,7 +241,7 @@ export default function AdminAppealsPage() {
             <Button variant="ghost" size="md" className="flex-1" onClick={() => setReviewOpen(false)}>
               {tCommon("cancel")}
             </Button>
-            <Button variant="primary" size="md" className="flex-1" disabled={reviewNote.length < 10} onClick={handleSubmitReview}>
+            <Button variant="primary" size="md" className="flex-1" disabled={reviewNote.length < 10} loading={submitting} onClick={handleSubmitReview}>
               {reviewDecision === "resolve" ? t("resolveAppeal") : t("rejectAppeal")}
             </Button>
           </div>

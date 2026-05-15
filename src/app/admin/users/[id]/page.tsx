@@ -2,31 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { UserProfile, Transaction } from "@/types";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-
-const mockUser = {
-  id: "usr_001",
-  nickname: "Alice Wang",
-  email: "alice.wang@durham.ac.uk",
-  avatar_url: null,
-  points_balance: 1250,
-  reputation: 85,
-  total_uploads: 12,
-  total_borrows: 45,
-  successful_uses: 42,
-  created_at: "2025-09-15T08:30:00Z",
-};
-
-const mockTransactions = [
-  { id: "tx_001", description: "Borrow ticket #TKT-001 earned points", amount: 50, date: "2026-05-14T10:30:00Z" },
-  { id: "tx_002", description: "Upload ticket #TKT-002 cost points", amount: -30, date: "2026-05-13T14:20:00Z" },
-  { id: "tx_003", description: "Appeal refund points", amount: 20, date: "2026-05-12T09:00:00Z" },
-  { id: "tx_004", description: "Ticket validation failed penalty", amount: -10, date: "2026-05-11T16:45:00Z" },
-  { id: "tx_005", description: "Referral bonus", amount: 100, date: "2026-05-10T11:15:00Z" },
-];
 
 function RepLevelBadge({ value }: { value: number }) {
   const t = useTranslations("admin");
@@ -38,10 +20,8 @@ function RepLevelBadge({ value }: { value: number }) {
         : value >= 30
           ? "bg-warning/10 text-warning"
           : "bg-destructive/10 text-destructive";
-
   const labelKey =
     value >= 80 ? "repExcellent" : value >= 50 ? "repGood" : value >= 30 ? "repFair" : "repRestricted";
-
   return (
     <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${colors}`}>
       {t(labelKey)}
@@ -56,7 +36,6 @@ function StatusBadge({ status }: { status: string }) {
     restricted: { colors: "bg-warning/10 text-warning border-warning/20", labelKey: "statusRestricted" },
     banned: { colors: "bg-destructive/10 text-destructive border-destructive/20", labelKey: "statusBanned" },
   };
-
   const c = cfg[status];
   if (!c) return null;
   return (
@@ -66,24 +45,39 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function AdjustPointsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AdjustPointsDialog({ open, onClose, userId, onDone }: {
+  open: boolean;
+  onClose: () => void;
+  userId: string;
+  onDone: () => void;
+}) {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const num = Number(amount);
     if (!amount || isNaN(num)) { setError(t("enterValidNumber")); return; }
     if (reason.trim().length < 10) { setError(t("reasonMinChars")); return; }
     setError("");
-    alert(t("pointsAdjustSuccess"));
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc("admin_adjust_user_points", {
+      p_user_id: userId,
+      p_amount: num,
+      p_reason: reason.trim(),
+    });
+    setSubmitting(false);
+    if (rpcError) { setError(rpcError.message); return; }
     setAmount("");
     setReason("");
     onClose();
+    onDone();
   };
 
   return (
@@ -114,32 +108,47 @@ function AdjustPointsDialog({ open, onClose }: { open: boolean; onClose: () => v
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={onClose}>{tCommon("cancel")}</Button>
-          <Button variant="primary" size="md" onClick={handleSubmit}>{t("confirmAdjust")}</Button>
+          <Button variant="outline" size="md" onClick={onClose} disabled={submitting}>{tCommon("cancel")}</Button>
+          <Button variant="primary" size="md" onClick={handleSubmit} loading={submitting}>{t("confirmAdjust")}</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function AdjustReputationDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AdjustReputationDialog({ open, onClose, userId, onDone }: {
+  open: boolean;
+  onClose: () => void;
+  userId: string;
+  onDone: () => void;
+}) {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const [value, setValue] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const num = Number(value);
     if (!value || isNaN(num) || num < 0 || num > 100) { setError(t("enterValidReputation")); return; }
     if (reason.trim().length < 10) { setError(t("reasonMinChars")); return; }
     setError("");
-    alert(t("reputationAdjustSuccess"));
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc("admin_adjust_user_reputation", {
+      p_user_id: userId,
+      p_value: num,
+      p_reason: reason.trim(),
+    });
+    setSubmitting(false);
+    if (rpcError) { setError(rpcError.message); return; }
     setValue("");
     setReason("");
     onClose();
+    onDone();
   };
 
   return (
@@ -171,36 +180,49 @@ function AdjustReputationDialog({ open, onClose }: { open: boolean; onClose: () 
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={onClose}>{tCommon("cancel")}</Button>
-          <Button variant="primary" size="md" onClick={handleSubmit}>{t("confirmAdjust")}</Button>
+          <Button variant="outline" size="md" onClick={onClose} disabled={submitting}>{tCommon("cancel")}</Button>
+          <Button variant="primary" size="md" onClick={handleSubmit} loading={submitting}>{t("confirmAdjust")}</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function ChangeStatusDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function ChangeStatusDialog({ open, onClose, userId, currentRep, onDone }: {
+  open: boolean;
+  onClose: () => void;
+  userId: string;
+  currentRep: number;
+  onDone: () => void;
+}) {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const [status, setStatus] = useState("normal");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;
 
-  const statusLabels: Record<string, string> = {
-    normal: t("statusNormal"),
-    restricted: t("statusRestricted"),
-    banned: t("statusBanned"),
-  };
+  const repMap: Record<string, number> = { normal: 50, restricted: 29, banned: 0 };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (reason.trim().length < 10) { setError(t("reasonMinChars")); return; }
     setError("");
-    alert(`${t("statusChangedTo")}: ${statusLabels[status]}`);
+    setSubmitting(true);
+    const newRep = repMap[status];
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc("admin_adjust_user_reputation", {
+      p_user_id: userId,
+      p_value: newRep,
+      p_reason: `${t("changeStatus")}: ${status} — ${reason.trim()}`,
+    });
+    setSubmitting(false);
+    if (rpcError) { setError(rpcError.message); return; }
     setStatus("normal");
     setReason("");
     onClose();
+    onDone();
   };
 
   return (
@@ -233,8 +255,8 @@ function ChangeStatusDialog({ open, onClose }: { open: boolean; onClose: () => v
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" size="md" onClick={onClose}>{tCommon("cancel")}</Button>
-          <Button variant="destructive" size="md" onClick={handleSubmit}>{t("confirmChange")}</Button>
+          <Button variant="outline" size="md" onClick={onClose} disabled={submitting}>{tCommon("cancel")}</Button>
+          <Button variant="destructive" size="md" onClick={handleSubmit} loading={submitting}>{t("confirmChange")}</Button>
         </div>
       </div>
     </div>
@@ -243,19 +265,69 @@ function ChangeStatusDialog({ open, onClose }: { open: boolean; onClose: () => v
 
 export default function AdminUserDetailPage() {
   const t = useTranslations("admin");
+  const { id } = useParams<{ id: string }>();
+
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"points" | "reputation" | "status" | null>(null);
 
-  const user = mockUser;
-  const transactions = mockTransactions;
+  const fetchData = () => {
+    const supabase = createClient();
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      supabase.from("users").select("*").eq("id", id).single(),
+      supabase.from("transactions").select("*").eq("borrower_id", id).order("created_at", { ascending: false }).limit(50),
+    ]).then(([userRes, txRes]) => {
+      if (userRes.error) {
+        setError(userRes.error.message);
+      } else {
+        setUser(userRes.data as UserProfile);
+      }
+      if (txRes.data) {
+        setTransactions(txRes.data as Transaction[]);
+      }
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !user) {
+    return (
+      <div className="space-y-6">
+        <Link href="/admin/users" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
+          <Icon name="chevron-left" size={16} />
+          {t("backToUsers")}
+        </Link>
+        <div className="bg-card border border-border rounded-xl p-12 text-center">
+          <Icon name="alert" size={32} className="text-destructive mx-auto mb-3" />
+          <p className="text-sm text-destructive">{error || t("loadError")}</p>
+        </div>
+      </div>
+    );
+  }
+
   const derivedStatus = user.reputation >= 50 ? "normal" : user.reputation >= 30 ? "restricted" : "banned";
 
   return (
     <div className="space-y-6">
       <div>
-        <Link
-          href="/admin/users"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
-        >
+        <Link href="/admin/users" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
           <Icon name="chevron-left" size={16} />
           {t("backToUsers")}
         </Link>
@@ -336,11 +408,13 @@ export default function AdminUserDetailPage() {
             {transactions.map((tx) => (
               <div key={tx.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                 <div>
-                  <p className="text-sm text-foreground">{tx.description}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{new Date(tx.date).toLocaleString()}</p>
+                  <p className="text-sm text-foreground">
+                    {tx.ticket_id.slice(0, 8)} &middot; {t(tx.status === "pending" ? "statusPending" : tx.status === "confirmed_valid" ? "statusConfirmedValid" : tx.status === "confirmed_invalid" ? "statusConfirmedInvalid" : "statusAutoSettled")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{new Date(tx.created_at).toLocaleString()}</p>
                 </div>
-                <span className={`font-semibold shrink-0 ${tx.amount > 0 ? "text-success" : "text-destructive"}`}>
-                  {tx.amount > 0 ? "+" : ""}{tx.amount}
+                <span className={`font-semibold shrink-0 ${tx.points_amount > 0 ? "text-success" : "text-destructive"}`}>
+                  {tx.points_amount > 0 ? "+" : ""}{tx.points_amount}
                 </span>
               </div>
             ))}
@@ -348,9 +422,9 @@ export default function AdminUserDetailPage() {
         )}
       </Card>
 
-      <AdjustPointsDialog open={dialog === "points"} onClose={() => setDialog(null)} />
-      <AdjustReputationDialog open={dialog === "reputation"} onClose={() => setDialog(null)} />
-      <ChangeStatusDialog open={dialog === "status"} onClose={() => setDialog(null)} />
+      <AdjustPointsDialog open={dialog === "points"} onClose={() => setDialog(null)} userId={user.id} onDone={fetchData} />
+      <AdjustReputationDialog open={dialog === "reputation"} onClose={() => setDialog(null)} userId={user.id} onDone={fetchData} />
+      <ChangeStatusDialog open={dialog === "status"} onClose={() => setDialog(null)} userId={user.id} currentRep={user.reputation} onDone={fetchData} />
     </div>
   );
 }

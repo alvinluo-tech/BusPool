@@ -29,6 +29,22 @@ export interface Database {
         Insert: Omit<Appeal, "id" | "created_at">;
         Update: Partial<Omit<Appeal, "id" | "created_at">>;
       };
+      admin_logs: {
+        Row: AdminLog;
+        Insert: Omit<AdminLog, "id" | "created_at">;
+        Update: Partial<Omit<AdminLog, "id" | "created_at">>;
+      };
+      notifications: {
+        Row: Notification;
+        Insert: Omit<Notification, "id" | "created_at">;
+        Update: Partial<Omit<Notification, "id" | "created_at">>;
+      };
+    };
+    Functions: {
+      borrow_ticket: { Args: { p_ticket_id: string }; Returns: Json };
+      confirm_result: { Args: { p_transaction_id: string; p_is_valid: boolean; p_failure_reason?: string }; Returns: Json };
+      auto_settle_expired_transactions: { Args: Record<string, never>; Returns: number };
+      get_user_profile: { Args: { p_user_id: string }; Returns: Json };
     };
   };
 }
@@ -44,6 +60,7 @@ export interface UserProfile {
   total_uploads: number;
   total_borrows: number;
   successful_uses: number;
+  is_admin: boolean;
   created_at: string;
 }
 
@@ -96,10 +113,42 @@ export interface Appeal {
   created_at: string;
 }
 
+export interface AdminLog {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details: Record<string, unknown> | null;
+  reason: string;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Json | null;
+  read: boolean;
+  created_at: string;
+}
+
 export interface TicketWithUploader extends Ticket {
   uploader: Pick<UserProfile, "nickname" | "avatar_url" | "reputation" | "successful_uses" | "total_uploads">;
 }
 
 export interface TransactionWithTicket extends Transaction {
   ticket: Ticket;
+}
+
+export interface TransactionWithJoins extends Transaction {
+  ticket: Ticket & { uploader: Pick<UserProfile, "nickname"> };
+  borrower: Pick<UserProfile, "nickname" | "email" | "reputation">;
+}
+
+export interface AppealWithJoins extends Appeal {
+  appellant: Pick<UserProfile, "nickname" | "email">;
+  transaction: Transaction & { ticket: Ticket & { uploader: Pick<UserProfile, "nickname"> }; borrower: Pick<UserProfile, "nickname"> };
 }

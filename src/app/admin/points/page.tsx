@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
@@ -14,20 +14,27 @@ interface UserResult {
   points_balance: number;
 }
 
-interface RecentOperation {
+interface LogRow {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_id: string;
+  details: Record<string, unknown> | null;
+  reason: string;
+  created_at: string;
+}
+
+interface RecentOp {
+  id: string;
+  targetUserId: string;
   nickname: string;
   email: string;
   amount: number;
+  newBalance: number;
   reason: string;
-  admin: string;
+  adminId: string;
   time: string;
 }
-
-const initialMockLogs: RecentOperation[] = [
-  { nickname: "Alice Johnson", email: "alice.johnson@durham.ac.uk", amount: 50, reason: "Compensation for invalid ticket upload on 2026-05-14", admin: "admin@buspool.app", time: "2026-05-14T14:30:00Z" },
-  { nickname: "Charlie Brown", email: "charlie.brown@durham.ac.uk", amount: -20, reason: "Penalty for uploading already-scanned ticket", admin: "admin@buspool.app", time: "2026-05-14T10:15:00Z" },
-  { nickname: "Diana Prince", email: "diana.p@durham.ac.uk", amount: 100, reason: "Welcome bonus adjustment for new user promotion", admin: "admin@buspool.app", time: "2026-05-13T09:00:00Z" },
-];
 
 export default function AdminPointsPage() {
   const t = useTranslations("admin");
@@ -43,7 +50,47 @@ export default function AdminPointsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const [recentOps, setRecentOps] = useState<RecentOperation[]>(initialMockLogs);
+  const [recentOps, setRecentOps] = useState<RecentOp[]>([]);
+  const [opsLoading, setOpsLoading] = useState(true);
+
+  const loadRecentOps = () => {
+    const supabase = createClient();
+    supabase
+      .from("admin_logs")
+      .select("*")
+      .eq("action", "adjust_points")
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(async ({ data }) => {
+        const logs = (data || []) as unknown as LogRow[];
+        // Collect target user IDs
+        const userIds = [...new Set(logs.map((l) => l.target_id))];
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, nickname, email")
+          .in("id", userIds);
+
+        const userMap = new Map((users || []).map((u) => [u.id, u]));
+        const ops: RecentOp[] = logs.map((l) => ({
+          id: l.id,
+          targetUserId: l.target_id,
+          nickname: userMap.get(l.target_id)?.nickname || t("unknown"),
+          email: userMap.get(l.target_id)?.email || "—",
+          amount: (l.details as Record<string, unknown>)?.amount as number || 0,
+          newBalance: (l.details as Record<string, unknown>)?.new_balance as number || 0,
+          reason: l.reason,
+          adminId: l.admin_id,
+          time: l.created_at,
+        }));
+        setRecentOps(ops);
+        setOpsLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadRecentOps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = async () => {
     setResult(null);
@@ -81,10 +128,11 @@ export default function AdminPointsPage() {
 
     setSubmitting(true);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("users")
-      .update({ points_balance: newBalance })
-      .eq("id", foundUser.id);
+    const { error } = await supabase.rpc("admin_adjust_user_points", {
+      p_user_id: foundUser.id,
+      p_amount: amount,
+      p_reason: reason.trim(),
+    });
 
     if (error) {
       setResult({ type: "error", message: error.message });
@@ -95,14 +143,10 @@ export default function AdminPointsPage() {
         message: t(msgKey, { amount: Math.abs(amount), balance: newBalance }),
       });
 
-      setRecentOps((prev) => [
-        { nickname: foundUser.nickname, email: foundUser.email, amount, reason, admin: "admin@buspool.app", time: new Date().toISOString() },
-        ...prev,
-      ]);
-
       setAmount(0);
       setReason("");
       setFoundUser((prev) => (prev ? { ...prev, points_balance: newBalance } : null));
+      loadRecentOps();
     }
     setSubmitting(false);
   };
@@ -236,12 +280,16 @@ export default function AdminPointsPage() {
 
       <Card className="p-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">{t("recentOperations")}</h3>
-        {recentOps.length === 0 ? (
+        {opsLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : recentOps.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">{t("noRecentOps")}</p>
         ) : (
           <div className="space-y-3">
-            {recentOps.map((op, i) => (
-              <div key={i} className="flex items-start justify-between py-2 border-b border-border last:border-0">
+            {recentOps.map((op) => (
+              <div key={op.id} className="flex items-start justify-between py-2 border-b border-border last:border-0">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${op.amount > 0 ? "text-success" : "text-destructive"}`}>
@@ -252,7 +300,7 @@ export default function AdminPointsPage() {
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-muted-foreground truncate">{op.reason}</span>
-                    <span className="text-xs text-muted-foreground shrink-0">by {op.admin}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{t("balanceAfter")}: {op.newBalance}</span>
                   </div>
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0 ml-3">{new Date(op.time).toLocaleString()}</span>

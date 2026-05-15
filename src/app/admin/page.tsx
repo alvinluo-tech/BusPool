@@ -1,38 +1,165 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import Icon from "@/components/ui/Icon";
 
-const statCards = [
-  { key: "dailyActiveUsers", value: 1284, change: "+12.5%", changeUp: true, icon: "users" as const, bg: "rgba(59, 130, 246, 0.1)", fg: "#2563eb", border: "rgba(59, 130, 246, 0.2)" },
-  { key: "dailyUploads", value: 342, change: "+8.2%", changeUp: true, icon: "tickets" as const, bg: "rgba(16, 185, 129, 0.1)", fg: "#059669", border: "rgba(16, 185, 129, 0.2)" },
-  { key: "dailyBorrows", value: 856, change: "+15.3%", changeUp: true, icon: "activity" as const, bg: "rgba(139, 92, 246, 0.1)", fg: "#7c3aed", border: "rgba(139, 92, 246, 0.2)" },
-  { key: "validityRate", value: "94.2%", change: "-2.1%", changeUp: false, icon: "check" as const, bg: "rgba(34, 197, 94, 0.1)", fg: "#16a34a", border: "rgba(34, 197, 94, 0.2)" },
-  { key: "availableTickets", value: 48, change: "--", changeUp: null, icon: "star" as const, bg: "rgba(245, 158, 11, 0.1)", fg: "#d97706", border: "rgba(245, 158, 11, 0.2)" },
-  { key: "pendingAppeals", value: 7, change: "+3", changeUp: false, icon: "alert" as const, bg: "rgba(239, 68, 68, 0.1)", fg: "#dc2626", border: "rgba(239, 68, 68, 0.2)" },
-];
+interface DashboardStats {
+  total_users: number;
+  total_tickets: number;
+  active_tickets: number;
+  pending_appeals: number;
+  pending_transactions: number;
+  daily_uploads: number;
+  daily_borrows: number;
+  validity_rate: number;
+  points_circulating: number;
+}
 
-const statLabelKeys: Record<string, string> = {
-  dailyActiveUsers: "dailyActiveUsers",
-  dailyUploads: "ticketsUploadedToday",
-  dailyBorrows: "todayBorrows",
-  validityRate: "ticketValidityRate",
-  availableTickets: "availableTickets",
-  pendingAppeals: "pendingAppeals",
+interface ChartPoint {
+  date: string;
+  uploads: number;
+  borrows: number;
+}
+
+const statIconMap: Record<string, "users" | "tickets" | "activity" | "check" | "star" | "alert"> = {
+  total_users: "users",
+  total_tickets: "tickets",
+  active_tickets: "star",
+  pending_appeals: "alert",
+  pending_transactions: "activity",
+  validity_rate: "check",
+  daily_uploads: "tickets",
+  daily_borrows: "activity",
+  points_circulating: "star",
 };
 
-const userGrowthData = [35, 55, 40, 70, 60, 85, 75, 90, 65, 80, 72, 88, 95, 78];
-const transactionData = [
-  { upload: 45, borrow: 30 }, { upload: 52, borrow: 38 }, { upload: 38, borrow: 25 },
-  { upload: 65, borrow: 48 }, { upload: 58, borrow: 42 }, { upload: 72, borrow: 55 }, { upload: 48, borrow: 35 },
-];
-const efficiencyData = [82, 85, 88, 84, 90, 87, 92, 89, 86, 91, 88, 93, 90, 92];
+const statColorMap: Record<string, { bg: string; fg: string; border: string }> = {
+  total_users: { bg: "rgba(59, 130, 246, 0.1)", fg: "#2563eb", border: "rgba(59, 130, 246, 0.2)" },
+  total_tickets: { bg: "rgba(16, 185, 129, 0.1)", fg: "#059669", border: "rgba(16, 185, 129, 0.2)" },
+  active_tickets: { bg: "rgba(245, 158, 11, 0.1)", fg: "#d97706", border: "rgba(245, 158, 11, 0.2)" },
+  pending_appeals: { bg: "rgba(239, 68, 68, 0.1)", fg: "#dc2626", border: "rgba(239, 68, 68, 0.2)" },
+  pending_transactions: { bg: "rgba(139, 92, 246, 0.1)", fg: "#7c3aed", border: "rgba(139, 92, 246, 0.2)" },
+  validity_rate: { bg: "rgba(34, 197, 94, 0.1)", fg: "#16a34a", border: "rgba(34, 197, 94, 0.2)" },
+  daily_uploads: { bg: "rgba(16, 185, 129, 0.1)", fg: "#059669", border: "rgba(16, 185, 129, 0.2)" },
+  daily_borrows: { bg: "rgba(139, 92, 246, 0.1)", fg: "#7c3aed", border: "rgba(139, 92, 246, 0.2)" },
+  points_circulating: { bg: "rgba(245, 158, 11, 0.1)", fg: "#d97706", border: "rgba(245, 158, 11, 0.2)" },
+};
 
-const dateLabels14 = ["05/02", "05/03", "05/04", "05/05", "05/06", "05/07", "05/08", "05/09", "05/10", "05/11", "05/12", "05/13", "05/14", "05/15"];
-const dayLabels7 = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const statLabelKeys: Record<string, string> = {
+  total_users: "totalUsers",
+  total_tickets: "totalTickets",
+  active_tickets: "availableTickets",
+  pending_appeals: "pendingAppeals",
+  pending_transactions: "pendingTransactions",
+  validity_rate: "ticketValidityRate",
+  daily_uploads: "dailyUploads",
+  daily_borrows: "dailyBorrows",
+  points_circulating: "pointsInCirculation",
+};
 
 export default function AdminDashboard() {
   const t = useTranslations("admin");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [dailyData, setDailyData] = useState<ChartPoint[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    const loadStats = async () => {
+      setLoading(true);
+
+      // Fetch aggregate stats via RPC
+      const { data: statsData } = await supabase.rpc("admin_get_dashboard_stats");
+      if (statsData) {
+        setStats(statsData as unknown as DashboardStats);
+      }
+
+      // Fetch daily chart data for last 14 days
+      const since14 = new Date();
+      since14.setDate(since14.getDate() - 14);
+      const sinceISO = since14.toISOString();
+
+      const [ticketsRes, txRes] = await Promise.all([
+        supabase.from("tickets").select("created_at").gte("created_at", sinceISO).order("created_at"),
+        supabase.from("transactions").select("created_at").gte("created_at", sinceISO).order("created_at"),
+      ]);
+
+      // Build date buckets for last 14 days
+      const dateMap: Record<string, ChartPoint> = {};
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        dateMap[key] = { date: key, uploads: 0, borrows: 0 };
+      }
+
+      if (ticketsRes.data) {
+        for (const t of ticketsRes.data) {
+          const key = t.created_at.slice(0, 10);
+          if (dateMap[key]) dateMap[key].uploads++;
+        }
+      }
+      if (txRes.data) {
+        for (const tx of txRes.data) {
+          const key = tx.created_at.slice(0, 10);
+          if (dateMap[key]) dateMap[key].borrows++;
+        }
+      }
+
+      setDailyData(Object.values(dateMap));
+      setLoading(false);
+    };
+
+    loadStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">{t("dashboard")}</h1>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-card rounded-xl p-5 border border-border animate-pulse">
+              <div className="h-10 w-10 rounded-lg bg-muted" />
+              <div className="h-4 w-24 bg-muted rounded mt-3" />
+              <div className="h-8 w-16 bg-muted rounded mt-1" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold text-foreground">{t("dashboard")}</h1>
+        <div className="bg-card rounded-xl p-12 text-center border border-border">
+          <Icon name="alert" size={32} className="text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">{t("loadError")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const statCards = [
+    { key: "total_users", value: stats.total_users },
+    { key: "total_tickets", value: stats.total_tickets },
+    { key: "active_tickets", value: stats.active_tickets },
+    { key: "validity_rate", value: `${stats.validity_rate}%` },
+    { key: "daily_uploads", value: stats.daily_uploads },
+    { key: "pending_appeals", value: stats.pending_appeals },
+  ];
+
+  const maxChartVal = Math.max(
+    ...dailyData.map((d) => Math.max(d.uploads, d.borrows)),
+    1,
+  );
 
   return (
     <div className="space-y-6">
@@ -45,43 +172,26 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((card) => (
-          <div key={card.key} className="bg-card rounded-xl p-5 border border-border hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div className="p-2.5 rounded-lg" style={{ backgroundColor: card.bg, borderColor: card.border, color: card.fg }}>
-                <Icon name={card.icon} size={22} />
+        {statCards.map((card) => {
+          const colors = statColorMap[card.key] || statColorMap.total_users;
+          const icon = statIconMap[card.key] || "star";
+          return (
+            <div key={card.key} className="bg-card rounded-xl p-5 border border-border hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div className="p-2.5 rounded-lg" style={{ backgroundColor: colors.bg, borderColor: colors.border, color: colors.fg }}>
+                  <Icon name={icon} size={22} />
+                </div>
               </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                {t(statLabelKeys[card.key] || card.key)}
+              </p>
+              <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
             </div>
-            <p className="text-sm text-muted-foreground mt-3">
-              {card.key === "pendingAppeals" ? t("pendingAppeals") : t(statLabelKeys[card.key])}
-            </p>
-            <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
-            <p className="text-xs mt-1" style={{ color: card.changeUp === null ? undefined : card.changeUp ? "#16a34a" : "#dc2626" }}>
-              {card.change}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="bg-card rounded-xl p-6 border border-border">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-base font-semibold text-foreground">{t("userGrowthTrend")}</h3>
-          <span className="text-sm font-medium" style={{ color: "#16a34a" }}>{t("growthVsLastMonth")}</span>
-        </div>
-        <div className="h-[200px] flex items-end gap-1.5">
-          {userGrowthData.map((h, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-              <div className="w-full rounded-t-md transition-all" style={{ height: `${h}%`, backgroundColor: "#3b82f6" }} />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-2">
-          {dateLabels14.filter((_, i) => i % 3 === 0 || i === dateLabels14.length - 1).map((label) => (
-            <span key={label} className="text-[10px] text-muted-foreground">{label}</span>
-          ))}
-        </div>
-      </div>
-
+      {/* Daily Uploads + Borrows Chart */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h3 className="text-base font-semibold text-foreground mb-4">{t("dailyTransactionVolume")}</h3>
         <div className="flex items-center gap-4 mb-6">
@@ -94,37 +204,42 @@ export default function AdminDashboard() {
             {t("borrowsChart")}
           </div>
         </div>
-        <div className="h-[200px] flex items-end gap-2">
-          {transactionData.map((day, i) => (
-            <div key={i} className="flex-1 flex items-end gap-0.5 h-full">
-              <div className="flex-1 rounded-t-md transition-all" style={{ height: `${day.upload}%`, backgroundColor: "#10b981" }} />
-              <div className="flex-1 rounded-t-md transition-all" style={{ height: `${day.borrow}%`, backgroundColor: "#8b5cf6" }} />
+        {dailyData.length === 0 ? (
+          <div className="text-center py-12 text-sm text-muted-foreground">{t("noData")}</div>
+        ) : (
+          <>
+            <div className="h-[200px] flex items-end gap-2">
+              {dailyData.map((day) => (
+                <div key={day.date} className="flex-1 flex items-end gap-0.5 h-full">
+                  <div
+                    className="flex-1 rounded-t-md transition-all"
+                    style={{
+                      height: maxChartVal > 0 ? `${(day.uploads / maxChartVal) * 100}%` : "0%",
+                      backgroundColor: "#10b981",
+                    }}
+                  />
+                  <div
+                    className="flex-1 rounded-t-md transition-all"
+                    style={{
+                      height: maxChartVal > 0 ? `${(day.borrows / maxChartVal) * 100}%` : "0%",
+                      backgroundColor: "#8b5cf6",
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-2">
-          {dayLabels7.map((label) => (
-            <span key={label} className="text-[10px] text-muted-foreground">{label}</span>
-          ))}
-        </div>
+            <div className="flex justify-between mt-2">
+              {dailyData.filter((_, i) => i % 3 === 0 || i === dailyData.length - 1).map((day) => (
+                <span key={day.date} className="text-[10px] text-muted-foreground">
+                  {new Date(day.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="bg-card rounded-xl p-6 border border-border">
-        <h3 className="text-base font-semibold text-foreground mb-6">{t("ticketValidityRateTrend")}</h3>
-        <div className="relative h-[200px] flex items-end gap-1">
-          {efficiencyData.map((val, i) => (
-            <div key={i} className="flex-1 flex flex-col justify-end h-full">
-              <div className="w-full rounded-t-sm transition-all" style={{ height: `${val}%`, background: "linear-gradient(to top, rgba(34,197,94,0.4), rgba(34,197,94,0.05))" }} />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-2">
-          {dateLabels14.filter((_, i) => i % 3 === 0 || i === dateLabels14.length - 1).map((label) => (
-            <span key={label} className="text-[10px] text-muted-foreground">{label}</span>
-          ))}
-        </div>
-      </div>
-
+      {/* Real-time Status */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h3 className="text-base font-semibold text-foreground mb-4">{t("realtimeStatus")}</h3>
         <div className="p-4 rounded-lg border mb-5 flex items-center gap-3" style={{ backgroundColor: "rgba(34, 197, 94, 0.05)", borderColor: "rgba(34, 197, 94, 0.2)" }}>
@@ -136,9 +251,9 @@ export default function AdminDashboard() {
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { icon: "clock" as const, labelKey: "avgResponseTime", value: "15 min" },
-            { icon: "activity" as const, labelKey: "activeTicketsCount", value: "12" },
-            { icon: "dollar" as const, labelKey: "pointsCirculating", value: "2,450" },
+            { icon: "clock" as const, labelKey: "pendingTransactions", value: stats.pending_transactions },
+            { icon: "activity" as const, labelKey: "activeTicketsCount", value: stats.active_tickets },
+            { icon: "dollar" as const, labelKey: "pointsCirculating", value: stats.points_circulating.toLocaleString() },
           ].map((item) => (
             <div key={item.labelKey} className="p-3 rounded-lg flex items-center gap-3 bg-muted/50">
               <div className="p-2 rounded-lg bg-muted">

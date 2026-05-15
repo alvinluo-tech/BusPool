@@ -1,43 +1,34 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { AdminLog } from "@/types";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
 
-interface AdminLog {
-  id: string;
-  admin_name: string;
-  action: string;
-  target_type: string;
-  target_name: string;
-  target_id: string;
-  detail: string;
-  reason: string;
-  created_at: string;
+interface LogWithAdmin extends AdminLog {
+  admin: { nickname: string; email: string } | null;
 }
 
-const mockLogs: AdminLog[] = [
-  { id: "log-001", admin_name: "Admin User", action: "adjust_points", target_type: "user", target_name: "Alice Johnson", target_id: "usr_001", detail: "Granted 50 points", reason: "Compensation for invalid ticket upload on 2026-05-14", created_at: "2026-05-14T14:30:00Z" },
-  { id: "log-002", admin_name: "Admin User", action: "adjust_reputation", target_type: "user", target_name: "Charlie Brown", target_id: "usr_002", detail: "Decreased reputation by 15", reason: "Repeated invalid ticket uploads", created_at: "2026-05-14T10:15:00Z" },
-  { id: "log-003", admin_name: "Moderator Dave", action: "ban_user", target_type: "user", target_name: "Eve Mallory", target_id: "usr_003", detail: "Account suspended", reason: "Multiple violations of ToS", created_at: "2026-05-13T16:45:00Z" },
-  { id: "log-004", admin_name: "Admin User", action: "review_appeal", target_type: "appeal", target_name: "Appeal #APL-008", target_id: "apl_008", detail: "Appeal resolved in favor of uploader", reason: "Evidence confirmed ticket was valid", created_at: "2026-05-13T12:00:00Z" },
-  { id: "log-005", admin_name: "Moderator Dave", action: "force_remove", target_type: "ticket", target_name: "Ticket #TKT-123", target_id: "tkt_123", detail: "Ticket forcibly removed", reason: "Reported as expired ticket still listed", created_at: "2026-05-12T09:30:00Z" },
-  { id: "log-006", admin_name: "Admin User", action: "manual_confirm", target_type: "transaction", target_name: "Transaction #TX-456", target_id: "tx_456", detail: "Manually confirmed as valid", reason: "Borrower reported scanner issue", created_at: "2026-05-12T08:00:00Z" },
-  { id: "log-007", admin_name: "Admin User", action: "adjust_points", target_type: "points", target_name: "Diana Prince", target_id: "usr_004", detail: "Deducted 30 points", reason: "Penalty for false appeal submission", created_at: "2026-05-11T15:20:00Z" },
-  { id: "log-008", admin_name: "Moderator Dave", action: "review_appeal", target_type: "appeal", target_name: "Appeal #APL-012", target_id: "apl_012", detail: "Appeal rejected", reason: "No evidence provided to support the claim", created_at: "2026-05-11T11:00:00Z" },
-];
-
-const operationTypes = ["all", "adjust_points", "adjust_reputation", "ban_user", "review_appeal", "force_remove", "manual_confirm"] as const;
-const targetTypes = ["all", "user", "ticket", "transaction", "appeal", "points"] as const;
+const operationTypes = ["all", "adjust_points", "adjust_reputation", "ban_user", "review_appeal", "force_remove", "manual_confirm", "revoke_transaction"] as const;
+const targetTypes = ["all", "user", "ticket", "transaction", "appeal"] as const;
 
 const operationLabelKeys: Record<string, string> = {
-  adjust_points: "opAdjustPoints", adjust_reputation: "opAdjustReputation", ban_user: "opBanUser",
-  review_appeal: "opReviewAppeal", force_remove: "opForceRemove", manual_confirm: "opManualConfirm",
+  adjust_points: "opAdjustPoints",
+  adjust_reputation: "opAdjustReputation",
+  ban_user: "opBanUser",
+  review_appeal: "opReviewAppeal",
+  force_remove: "opForceRemove",
+  manual_confirm: "opManualConfirm",
+  revoke_transaction: "opRevokeTransaction",
 };
 
 const targetLabelKeys: Record<string, string> = {
-  user: "tgUser", ticket: "tgTicket", transaction: "tgTransaction", appeal: "tgAppeal", points: "tgPoints",
+  user: "tgUser",
+  ticket: "tgTicket",
+  transaction: "tgTransaction",
+  appeal: "tgAppeal",
 };
 
 const operationBadge: Record<string, string> = {
@@ -47,29 +38,60 @@ const operationBadge: Record<string, string> = {
   review_appeal: "bg-success/10 text-success border-success/20",
   force_remove: "bg-warning/10 text-warning border-warning/20",
   manual_confirm: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  revoke_transaction: "bg-orange-500/10 text-orange-600 border-orange-500/20",
 };
 
 export default function AdminLogsPage() {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
 
+  const [logs, setLogs] = useState<LogWithAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
   const [opFilter, setOpFilter] = useState<string>("all");
   const [targetFilter, setTargetFilter] = useState<string>("all");
 
-  const filtered = mockLogs.filter((log) => {
+  useEffect(() => {
+    const supabase = createClient();
+    setLoading(true);
+    supabase
+      .from("admin_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        const rawLogs = (data || []) as unknown as LogWithAdmin[];
+        setLogs(rawLogs);
+        setLoading(false);
+      });
+  }, []);
+
+  const filtered = logs.filter((log) => {
     if (opFilter !== "all" && log.action !== opFilter) return false;
     if (targetFilter !== "all" && log.target_type !== targetFilter) return false;
     return true;
   });
 
+  const formatDetail = (log: LogWithAdmin): string => {
+    if (!log.details) return "—";
+    const d = log.details as Record<string, unknown>;
+    if (log.action === "adjust_points") return `${d.amount || 0} pts → balance: ${d.new_balance || "?"}`;
+    if (log.action === "adjust_reputation") return `${d.old_value || "?"} → ${d.new_value || "?"}`;
+    if (log.action === "force_remove") return t("ticketInvalidated");
+    if (log.action === "manual_confirm" || log.action === "revoke_transaction") return t("statusChanged");
+    if (log.action === "review_appeal") return d.decision === "resolved" ? t("appealResolved") : t("appealRejected");
+    return "—";
+  };
+
   const handleExportCsv = () => {
-    const headers = ["Time", "Admin", "Operation Type", "Target Type", "Target Name", "Target ID", "Detail", "Reason"];
+    const headers = ["Time", "Admin", "Action", "Target Type", "Target ID", "Detail", "Reason"];
     const rows = filtered.map((log) => [
       new Date(log.created_at).toLocaleString(),
-      log.admin_name,
+      log.admin?.nickname || log.admin_id.slice(0, 8),
       t(operationLabelKeys[log.action] || log.action),
       t(targetLabelKeys[log.target_type] || log.target_type),
-      log.target_name, log.target_id, log.detail, log.reason,
+      log.target_id,
+      formatDetail(log),
+      log.reason,
     ]);
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -130,10 +152,14 @@ export default function AdminLogsPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl shadow-level1 overflow-hidden">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">{t("noLogs")}</div>
-        ) : (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">{t("noLogs")}</div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl shadow-level1 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -154,7 +180,7 @@ export default function AdminLogsPage() {
                       <td className="p-4">
                         <span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</span>
                       </td>
-                      <td className="p-4"><span className="text-sm text-foreground">{log.admin_name}</span></td>
+                      <td className="p-4"><span className="text-sm text-foreground">{log.admin?.nickname || log.admin_id.slice(0, 8)}</span></td>
                       <td className="p-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badge}`}>
                           {t(operationLabelKeys[log.action] || log.action)}
@@ -162,11 +188,11 @@ export default function AdminLogsPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex flex-col">
-                          <span className="text-sm text-foreground">{log.target_name}</span>
-                          <span className="text-xs text-muted-foreground font-mono">{log.target_id}</span>
+                          <span className="text-sm text-foreground">{t(targetLabelKeys[log.target_type] || log.target_type)}</span>
+                          <span className="text-xs text-muted-foreground font-mono">{log.target_id.slice(0, 12)}</span>
                         </div>
                       </td>
-                      <td className="p-4"><span className="text-sm text-foreground">{log.detail}</span></td>
+                      <td className="p-4"><span className="text-sm text-foreground">{formatDetail(log)}</span></td>
                       <td className="p-4">
                         <p className="text-sm text-foreground max-w-xs truncate" title={log.reason}>{log.reason}</p>
                       </td>
@@ -176,8 +202,8 @@ export default function AdminLogsPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

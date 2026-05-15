@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import type { Appeal } from "@/types";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
@@ -91,7 +92,7 @@ export default function AdminAppealsPage() {
       p_admin_note: reviewNote.trim(),
     });
     setSubmitting(false);
-    if (error) { alert(error.message); return; }
+    if (error) { toast.error(error.message); return; }
     setReviewOpen(false);
     setCurrentAppeal(null);
     setReviewNote("");

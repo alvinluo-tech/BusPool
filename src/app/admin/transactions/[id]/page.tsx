@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import type { Transaction, Appeal, Ticket } from "@/types";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
@@ -101,7 +102,7 @@ export default function AdminTransactionDetailPage() {
     });
     setConfirmSubmitting(false);
     if (rpcError) {
-      alert(rpcError.message);
+      toast.error(rpcError.message);
       return;
     }
     setConfirmOpen(false);
@@ -119,7 +120,7 @@ export default function AdminTransactionDetailPage() {
     });
     setRevokeSubmitting(false);
     if (rpcError) {
-      alert(rpcError.message);
+      toast.error(rpcError.message);
       return;
     }
     setRevokeOpen(false);

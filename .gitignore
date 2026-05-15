@@ -46,6 +46,7 @@ yarn-error.log*
 # local settings
 .claude/settings.local.json
 src/app/.claude/settings.local.json
+supabase/.connection.json
 .roo/
 UI/
 

@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { toast } from "sonner";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
 import type { IconName } from "@/components/ui/Icon";
@@ -207,13 +208,28 @@ export default function SettingsPage() {
   };
 
   const handleClearCache = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    // Clear service worker caches if any
-    if ("caches" in window) {
-      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
-    }
-    alert("Cache cleared"); // temporary — use toast later
+    const doClear = () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      if ("caches" in window) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+      }
+      toast.success(t("cacheCleared"), { id: "cache-clear" });
+    };
+
+    toast(t("clearCacheConfirmTitle"), {
+      id: "cache-clear",
+      description: t("clearCacheConfirmDesc"),
+      duration: 8000,
+      action: {
+        label: tCommon("confirm"),
+        onClick: () => doClear(),
+      },
+      cancel: {
+        label: tCommon("cancel"),
+        onClick: () => {},
+      },
+    });
   };
 
   const handleDeleteAccount = async () => {

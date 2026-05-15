@@ -238,8 +238,6 @@
     "adminPanel": "管理后台",
     "language": "语言",
     "theme": "主题",
-    "darkMode": "深色模式",
-    "lightMode": "浅色模式",
     "profileNotFound": "未找到用户数据，请重新登录。",
     "version": "BusPool v1.0.0",
     "madeFor": "为 Durham 学生打造"
@@ -643,6 +641,8 @@
     "downloadDataDesc": "获取你的信息副本",
     "clearCache": "清除缓存",
     "clearCacheDesc": "释放存储空间",
+    "clearCacheConfirmTitle": "确定要清除缓存吗？",
+    "clearCacheConfirmDesc": "这将清除所有离线数据和服务工作线程缓存。",
     "analytics": "分析",
     "analyticsDesc": "帮助我们改进 BusPool",
     "dangerZone": "危险区域",

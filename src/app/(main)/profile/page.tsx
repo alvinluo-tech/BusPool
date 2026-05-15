@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,7 +28,6 @@ function ReputationBadge({ reputation, labels }: { reputation: number; labels: R
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,24 +143,13 @@ export default function ProfilePage() {
           <span className="flex-1 text-sm font-medium text-foreground">{t("notifications")}</span>
           <Icon name="chevron-right" size={20} className="text-muted-foreground" />
         </Link>
-        <Link href="/settings" className="flex items-center gap-3 px-5 py-4 border-b border-border hover:bg-muted transition-colors">
+        <Link href="/settings" className="flex items-center gap-3 px-5 py-4 hover:bg-muted transition-colors">
           <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
             <Icon name="settings" size={20} className="text-muted-foreground" />
           </div>
           <span className="flex-1 text-sm font-medium text-foreground">{t("settings")}</span>
           <Icon name="chevron-right" size={20} className="text-muted-foreground" />
         </Link>
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex items-center gap-3 px-5 py-4 w-full hover:bg-muted transition-colors"
-        >
-          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-            <Icon name="settings" size={20} className="text-muted-foreground" />
-          </div>
-          <span className="flex-1 text-sm font-medium text-foreground text-left">
-            {theme === "dark" ? t("lightMode") : t("darkMode")}
-          </span>
-        </button>
       </Card>
 
       {/* Secondary Menu */}

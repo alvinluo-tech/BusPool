@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale, setRequestLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
+import ToasterProvider from "@/components/ui/ToasterProvider";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -43,6 +44,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <ToasterProvider />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

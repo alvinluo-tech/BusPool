@@ -238,8 +238,6 @@
     "adminPanel": "Admin Dashboard",
     "language": "Language",
     "theme": "Theme",
-    "darkMode": "Dark Mode",
-    "lightMode": "Light Mode",
     "profileNotFound": "Profile data not found. Please try logging in again.",
     "version": "BusPool v1.0.0",
     "madeFor": "Made for Durham students"
@@ -648,6 +646,8 @@
     "downloadDataDesc": "Get a copy of your information",
     "clearCache": "Clear Cache",
     "clearCacheDesc": "Free up storage space",
+    "clearCacheConfirmTitle": "Clear local cache?",
+    "clearCacheConfirmDesc": "This will remove all offline data and service worker caches.",
     "analytics": "Analytics",
     "analyticsDesc": "Help us improve BusPool",
     "dangerZone": "DANGER ZONE",

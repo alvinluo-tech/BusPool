@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getLocale } from "next-intl/server";
+import { getMessages, getLocale, setRequestLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
@@ -29,6 +29,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getLocale();
+  setRequestLocale(locale);
   const messages = await getMessages();
 
   return (

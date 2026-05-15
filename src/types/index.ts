@@ -44,6 +44,11 @@ export interface Database {
         Insert: Omit<PointRecord, "id" | "created_at">;
         Update: Partial<Omit<PointRecord, "id" | "created_at">>;
       };
+      user_preferences: {
+        Row: UserPreferences;
+        Insert: Omit<UserPreferences, "updated_at">;
+        Update: Partial<Omit<UserPreferences, "user_id" | "updated_at">>;
+      };
     };
     Functions: {
       borrow_ticket: { Args: { p_ticket_id: string }; Returns: Json };
@@ -174,4 +179,32 @@ export interface TransactionWithJoins extends Transaction {
 export interface AppealWithJoins extends Appeal {
   appellant: Pick<UserProfile, "nickname" | "email">;
   transaction: Transaction & { ticket: Ticket & { uploader: Pick<UserProfile, "nickname"> }; borrower: Pick<UserProfile, "nickname"> };
+}
+
+export interface QuietHours {
+  start: string; // HH:mm
+  end: string;   // HH:mm
+  enabled: boolean;
+}
+
+export interface NotificationPreferences {
+  newTickets: boolean;
+  ticketExpiring: boolean;
+  ticketUsed: boolean;
+  reputationChanges: boolean;
+  reputationMilestones: boolean;
+  lowReputationWarning: boolean;
+  pointsReceived: boolean;
+  appealUpdates: boolean;
+  confirmationReminders: boolean;
+  announcements: boolean;
+  tipsSuggestions: boolean;
+}
+
+export interface UserPreferences {
+  user_id: string;
+  notifications: NotificationPreferences;
+  analytics_enabled: boolean;
+  quiet_hours: QuietHours | null;
+  updated_at: string;
 }

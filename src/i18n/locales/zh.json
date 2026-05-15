@@ -683,6 +683,11 @@
     "quietHoursDesc": "在特定时段静音非紧急通知，避免打扰。",
     "setQuietHours": "设置免打扰时段",
     "importantNote": "重要提示",
-    "importantNoteDesc": "部分通知（如重要安全提醒和账户变更）将始终发送，不受设置影响。"
+    "importantNoteDesc": "部分通知（如重要安全提醒和账户变更）将始终发送，不受设置影响。",
+    "newPassword": "新密码",
+    "currentSession": "当前会话",
+    "dataExported": "数据导出成功",
+    "cacheCleared": "缓存已清除",
+    "typeDelete": "输入 DELETE 确认"
   }
 }

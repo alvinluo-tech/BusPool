@@ -6,9 +6,8 @@ import { routing } from "@/i18n/routing";
 const handleI18nRouting = createMiddleware(routing);
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  // Run i18n middleware first to set locale from cookie
+  const response = handleI18nRouting(request);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,11 +21,8 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           );
         },
       },
@@ -35,11 +31,5 @@ export async function updateSession(request: NextRequest) {
 
   await supabase.auth.getUser();
 
-  const i18nResponse = handleI18nRouting(request);
-
-  i18nResponse.cookies.getAll().forEach((cookie) => {
-    supabaseResponse.cookies.set(cookie.name, cookie.value, cookie);
-  });
-
-  return supabaseResponse;
+  return response;
 }

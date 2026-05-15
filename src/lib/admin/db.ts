@@ -10,6 +10,19 @@ export function getOriginalPhotoUrl(filename: string): string {
   return getStoragePublicUrl("ticket-originals", filename);
 }
 
+/** Check if a string is already a full HTTP(S) URL */
+export function isFullUrl(str: string): boolean {
+  return str.startsWith("http://") || str.startsWith("https://");
+}
+
+/** Download a private bucket file and return an object URL for <img> display */
+export async function getPrivatePhotoUrl(bucket: string, path: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.storage.from(bucket).download(path);
+  if (error || !data) return null;
+  return URL.createObjectURL(data);
+}
+
 export async function insertAdminLog(
   adminId: string,
   action: string,

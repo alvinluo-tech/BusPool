@@ -31,7 +31,11 @@ export type IconName =
   | "help"
   | "settings"
   | "mail"
-  | "loader";
+  | "loader"
+  | "gift"
+  | "arrow-down"
+  | "rotate-ccw"
+  | "check-circle";
 
 interface IconProps {
   name: IconName;
@@ -286,6 +290,45 @@ const icons: Record<IconName, { viewBox: string; path: React.ReactNode }> = {
     viewBox: "0 0 24 24",
     path: (
       <path d="M21 12a9 9 0 11-6.219-8.56" />
+    ),
+  },
+  gift: {
+    viewBox: "0 0 24 24",
+    path: (
+      <>
+        <polyline points="20,12 20,22 4,22 4,12" />
+        <rect x="2" y="7" width="20" height="5" />
+        <line x1="12" y1="22" x2="12" y2="7" />
+        <path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z" />
+        <path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />
+      </>
+    ),
+  },
+  "arrow-down": {
+    viewBox: "0 0 24 24",
+    path: (
+      <>
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <polyline points="19,12 12,19 5,12" />
+      </>
+    ),
+  },
+  "rotate-ccw": {
+    viewBox: "0 0 24 24",
+    path: (
+      <>
+        <polyline points="1,4 1,10 7,10" />
+        <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+      </>
+    ),
+  },
+  "check-circle": {
+    viewBox: "0 0 24 24",
+    path: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="7,12 11,15 17,9" />
+      </>
     ),
   },
 };

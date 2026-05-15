@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getStoragePublicUrl } from "@/lib/admin/db";
+import { isFullUrl, getPrivatePhotoUrl } from "@/lib/admin/db";
 import { QRCodeSVG } from "qrcode.react";
 import Icon from "@/components/ui/Icon";
 import Button from "@/components/ui/Button";
@@ -155,6 +155,7 @@ export default function AdminTicketDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [photoEnlarged, setPhotoEnlarged] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   const fetchData = () => {
     const supabase = createClient();
@@ -172,11 +173,22 @@ export default function AdminTicketDetailPage() {
         .select("*, borrower:users!transactions_borrower_id_fkey(nickname, email)")
         .eq("ticket_id", id)
         .order("created_at", { ascending: false }),
-    ]).then(([ticketRes, borrowsRes]) => {
+    ]).then(async ([ticketRes, borrowsRes]) => {
       if (ticketRes.error) {
         setError(ticketRes.error.message);
       } else {
-        setTicket(ticketRes.data as unknown as TicketData);
+        const ticketData = ticketRes.data as unknown as TicketData;
+        setTicket(ticketData);
+
+        // Load photo: full URL (old data) vs private bucket path (new data)
+        if (ticketData.barcode_image_url) {
+          if (isFullUrl(ticketData.barcode_image_url)) {
+            setPhotoUrl(ticketData.barcode_image_url);
+          } else {
+            const url = await getPrivatePhotoUrl("ticket-originals", ticketData.barcode_image_url);
+            setPhotoUrl(url);
+          }
+        }
       }
       if (borrowsRes.data) {
         setBorrows(borrowsRes.data as unknown as BorrowRecord[]);
@@ -212,10 +224,6 @@ export default function AdminTicketDetailPage() {
       </div>
     );
   }
-
-  const photoUrl = ticket.barcode_image_url
-    ? getStoragePublicUrl("ticket-originals", ticket.barcode_image_url)
-    : null;
 
   return (
     <div className="space-y-6">

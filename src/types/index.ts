@@ -39,6 +39,11 @@ export interface Database {
         Insert: Omit<Notification, "id" | "created_at">;
         Update: Partial<Omit<Notification, "id" | "created_at">>;
       };
+      point_records: {
+        Row: PointRecord;
+        Insert: Omit<PointRecord, "id" | "created_at">;
+        Update: Partial<Omit<PointRecord, "id" | "created_at">>;
+      };
     };
     Functions: {
       borrow_ticket: { Args: { p_ticket_id: string }; Returns: Json };
@@ -132,6 +137,24 @@ export interface Notification {
   body: string;
   data: Json | null;
   read: boolean;
+  created_at: string;
+}
+
+export type PointRecordType =
+  | "welcome_bonus"
+  | "admin_adjustment"
+  | "upload_reward"
+  | "borrow_cost"
+  | "refund"
+  | "appeal_reward";
+
+export interface PointRecord {
+  id: string;
+  user_id: string;
+  amount: number;
+  type: PointRecordType;
+  description: string | null;
+  reference_id: string | null;
   created_at: string;
 }
 

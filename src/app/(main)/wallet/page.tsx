@@ -9,68 +9,22 @@ import type { IconName } from "@/components/ui/Icon";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { groupByDate, formatTime } from "@/lib/utils";
+import type { PointRecord } from "@/types";
 
-interface TransactionRow {
-  id: string;
-  points_amount: number;
-  status: string;
-  created_at: string;
-  borrower_id: string;
-  ticket?: { ticket_type: string; uploader?: { nickname: string } | null } | null;
-  borrower?: { nickname: string } | null;
-}
-
-function getDescription(tx: TransactionRow, userId: string): string {
-  const isBorrower = tx.borrower_id === userId;
-  const otherName = isBorrower
-    ? tx.ticket?.uploader?.nickname || "Unknown"
-    : tx.borrower?.nickname || "Unknown";
-  if (isBorrower) return `Borrowed from ${otherName}`;
-  return `Shared with ${otherName}`;
-}
-
-function getTxStyle(tx: TransactionRow, userId: string): {
-  isExpense: boolean;
-  isPending: boolean;
-  showAsTransfer: boolean;
-  sign: string;
-  colorClass: string;
-  bgClass: string;
-  iconName: IconName;
-  iconColor: string;
-} {
-  const isExpense = tx.borrower_id === userId;
-  const isPending = tx.status === "pending";
-  const isConfirmed = tx.status === "confirmed_valid";
-  // Only confirmed_valid means actual money moved
-  const showAsTransfer = isConfirmed;
-  const sign = isExpense ? "-" : "+";
-  const colorClass = showAsTransfer
-    ? (isExpense ? "text-destructive" : "text-success")
-    : "text-muted-foreground";
-  const bgClass = isPending
-    ? "bg-warning/10"
-    : showAsTransfer
-      ? (isExpense ? "bg-destructive/10" : "bg-success/10")
-      : "bg-muted";
-  const iconName = isPending
-    ? "clock"
-    : isExpense ? "arrow-down-left" : "arrow-up-right";
-  const iconColor = isPending
-    ? "text-warning"
-    : showAsTransfer
-      ? (isExpense ? "text-destructive" : "text-success")
-      : "text-muted-foreground";
-
-  return { isExpense, isPending, showAsTransfer, sign, colorClass, bgClass, iconName, iconColor };
-}
+const typeConfig: Record<string, { icon: IconName; color: string; bgClass: string; labelKey: string }> = {
+  welcome_bonus: { icon: "gift", color: "text-emerald-500", bgClass: "bg-emerald-500/10", labelKey: "welcomeBonusDesc" },
+  admin_adjustment: { icon: "shield", color: "text-blue-500", bgClass: "bg-blue-500/10", labelKey: "adminAdjustmentDesc" },
+  upload_reward: { icon: "star", color: "text-amber-500", bgClass: "bg-amber-500/10", labelKey: "uploadRewardDesc" },
+  borrow_cost: { icon: "arrow-down", color: "text-orange-500", bgClass: "bg-orange-500/10", labelKey: "borrowCostDesc" },
+  refund: { icon: "rotate-ccw", color: "text-purple-500", bgClass: "bg-purple-500/10", labelKey: "refundDesc" },
+  appeal_reward: { icon: "check-circle", color: "text-teal-500", bgClass: "bg-teal-500/10", labelKey: "appealRewardDesc" },
+};
 
 export default function WalletPage() {
   const t = useTranslations("wallet");
   const tCommon = useTranslations("common");
   const [balance, setBalance] = useState(0);
-  const [userId, setUserId] = useState("");
-  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [records, setRecords] = useState<PointRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
 
@@ -79,7 +33,6 @@ export default function WalletPage() {
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      setUserId(user.id);
 
       const { data: profile } = await supabase
         .from("users")
@@ -88,52 +41,39 @@ export default function WalletPage() {
         .single();
       setBalance(profile?.points_balance ?? 0);
 
-      // Get transactions where user is borrower
-      const { data: expenseTxs } = await supabase
-        .from("transactions")
-        .select("id, points_amount, status, created_at, borrower_id, ticket:tickets(ticket_type, uploader:users!tickets_uploader_id_fkey(nickname)), borrower:users!transactions_borrower_id_fkey(nickname)")
-        .eq("borrower_id", user.id)
+      const { data: pointRecords } = await supabase
+        .from("point_records")
+        .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      // Get transactions where user's ticket was borrowed (income)
-      const { data: incomeTxs } = await supabase
-        .from("transactions")
-        .select("id, points_amount, status, created_at, borrower_id, ticket:tickets!inner(ticket_type), borrower:users!transactions_borrower_id_fkey(nickname)")
-        .eq("tickets.uploader_id", user.id)
-        .order("created_at", { ascending: false });
-
-      const allTxs = [...(expenseTxs || []), ...(incomeTxs || [])];
-      // Deduplicate (in case user borrowed their own ticket)
-      const seen = new Set<string>();
-      const merged = allTxs.filter((tx) => {
-        if (seen.has(tx.id)) return false;
-        seen.add(tx.id);
-        return true;
-      });
-
-      setTransactions(merged as unknown as TransactionRow[]);
+      setRecords((pointRecords || []) as PointRecord[]);
       setLoading(false);
     };
     fetchData();
   }, []);
 
-  // Only confirmed_valid transactions involve actual money movement
-  const totalIncome = transactions
-    .filter((tx) => tx.borrower_id !== userId && tx.status === "confirmed_valid")
-    .reduce((sum, tx) => sum + tx.points_amount, 0);
+  const totalIncome = records
+    .filter((r) => r.amount > 0)
+    .reduce((sum, r) => sum + r.amount, 0);
 
-  const totalExpense = transactions
-    .filter((tx) => tx.borrower_id === userId && tx.status === "confirmed_valid")
-    .reduce((sum, tx) => sum + tx.points_amount, 0);
+  const totalExpense = records
+    .filter((r) => r.amount < 0)
+    .reduce((sum, r) => sum + Math.abs(r.amount), 0);
 
-  const filtered = transactions.filter((tx) => {
-    const isExpense = tx.borrower_id === userId;
-    if (filter === "income") return !isExpense;
-    if (filter === "expense") return isExpense;
+  const filtered = records.filter((r) => {
+    if (filter === "income") return r.amount > 0;
+    if (filter === "expense") return r.amount < 0;
     return true;
   });
 
   const groups = groupByDate(filtered);
+
+  function getDescription(record: PointRecord): string {
+    if (record.description) return record.description;
+    const cfg = typeConfig[record.type];
+    return cfg ? t(cfg.labelKey) : record.type;
+  }
 
   return (
     <div>
@@ -182,7 +122,7 @@ export default function WalletPage() {
         ))}
       </div>
 
-      {/* Transaction History */}
+      {/* Point Records */}
       {loading ? (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
@@ -200,45 +140,30 @@ export default function WalletPage() {
                 {group.label}
               </p>
               <div className="space-y-2">
-                {group.items.map((tx) => {
-                  const description = getDescription(tx, userId);
-                  const { isPending, showAsTransfer, sign, colorClass, bgClass, iconName, iconColor } = getTxStyle(tx, userId);
+                {group.items.map((record) => {
+                  const isIncome = record.amount > 0;
+                  const cfg = typeConfig[record.type] || { icon: "info" as IconName, color: "text-muted-foreground", bgClass: "bg-muted", labelKey: "" };
+                  const description = getDescription(record);
 
                   return (
-                    <Card key={tx.id} className="p-4 flex items-center gap-3">
+                    <Card key={record.id} className="p-4 flex items-center gap-3">
                       {/* Icon */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bgClass}`}>
-                        <Icon name={iconName} size={18} className={iconColor} />
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${cfg.bgClass}`}>
+                        <Icon name={cfg.icon} size={18} className={cfg.color} />
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {description}
-                          </p>
-                          {isPending && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning shrink-0">
-                              Pending
-                            </span>
-                          )}
-                          {!showAsTransfer && !isPending && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                              Failed
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{formatTime(tx.created_at)}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {description}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{formatTime(record.created_at)}</p>
                       </div>
 
                       {/* Points */}
-                      {isPending ? (
-                        <span className="text-sm text-muted-foreground">···</span>
-                      ) : (
-                        <span className={`font-bold text-sm ${colorClass}`}>
-                          {sign}{tx.points_amount}
-                        </span>
-                      )}
+                      <span className={`font-bold text-sm ${isIncome ? "text-success" : "text-destructive"}`}>
+                        {isIncome ? "+" : ""}{record.amount}
+                      </span>
                     </Card>
                   );
                 })}

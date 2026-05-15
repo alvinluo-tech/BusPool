@@ -211,7 +211,13 @@
     "income": "收入",
     "expense": "支出",
     "refund": "退款",
-    "empty": "暂无交易记录"
+    "empty": "暂无交易记录",
+    "welcomeBonusDesc": "注册奖励",
+    "adminAdjustmentDesc": "管理员操作",
+    "uploadRewardDesc": "分享奖励",
+    "borrowCostDesc": "借用花费",
+    "refundDesc": "退款",
+    "appealRewardDesc": "申诉补偿"
   },
   "profile": {
     "title": "个人中心",

@@ -211,7 +211,13 @@
     "income": "Income",
     "expense": "Expense",
     "refund": "Refund",
-    "empty": "No transactions yet"
+    "empty": "No transactions yet",
+    "welcomeBonusDesc": "Welcome Bonus",
+    "adminAdjustmentDesc": "Admin Adjustment",
+    "uploadRewardDesc": "Share Reward",
+    "borrowCostDesc": "Borrow Cost",
+    "refundDesc": "Refund",
+    "appealRewardDesc": "Appeal Compensation"
   },
   "profile": {
     "title": "My Profile",

@@ -98,50 +98,81 @@ export default function AdminTransactionsPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-sm">{tCommon("noResults")}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("transactionId")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("ticketId")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("uploader")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("borrower")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("pointsAmount")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("created")}</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("action")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((tx) => {
-                  const cfg = statusConfig[tx.status] || statusConfig.pending;
-                  return (
-                    <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="p-4"><span className="font-mono text-sm text-foreground">{tx.id.slice(0, 8)}</span></td>
-                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{tx.ticket_id.slice(0, 8)}</span></td>
-                      <td className="p-4"><span className="text-sm text-muted-foreground">{tx.ticket?.uploader?.nickname || t("unknown")}</span></td>
-                      <td className="p-4"><span className="text-sm text-muted-foreground">{tx.borrower?.nickname || tx.borrower_id.slice(0, 12)}</span></td>
-                      <td className="p-4"><span className="font-semibold text-primary">{tx.points_amount > 0 ? "+" : ""}{tx.points_amount}</span></td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("transactionId")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("ticketId")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("uploader")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("borrower")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("pointsAmount")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("created")}</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("action")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map((tx) => {
+                    const cfg = statusConfig[tx.status] || statusConfig.pending;
+                    return (
+                      <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="p-4"><span className="font-mono text-sm text-foreground">{tx.id.slice(0, 8)}</span></td>
+                        <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{tx.ticket_id.slice(0, 8)}</span></td>
+                        <td className="p-4"><span className="text-sm text-muted-foreground">{tx.ticket?.uploader?.nickname || t("unknown")}</span></td>
+                        <td className="p-4"><span className="text-sm text-muted-foreground">{tx.borrower?.nickname || tx.borrower_id.slice(0, 12)}</span></td>
+                        <td className="p-4"><span className="font-semibold text-primary">{tx.points_amount > 0 ? "+" : ""}{tx.points_amount}</span></td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>
+                            {t(cfg.labelKey)}
+                          </span>
+                        </td>
+                        <td className="p-4"><span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(tx.created_at).toLocaleDateString()}</span></td>
+                        <td className="p-4">
+                          <Link href={`/admin/transactions/${tx.id}`} className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <Icon name="chevron-right" size={18} />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3 p-4">
+              {filtered.map((tx) => {
+                const cfg = statusConfig[tx.status] || statusConfig.pending;
+                return (
+                  <Link key={tx.id} href={`/admin/transactions/${tx.id}`} className="block bg-muted/30 border border-border rounded-xl p-4 active:bg-muted/60 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-foreground">#{tx.id.slice(0, 8)}</span>
+                        <span className="text-xs text-muted-foreground">→ #{tx.ticket_id.slice(0, 8)}</span>
+                      </div>
+                      <span className="font-semibold text-base">{tx.points_amount > 0 ? "+" : ""}{tx.points_amount}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm mb-1">
+                      <span className="text-muted-foreground">{tx.ticket?.uploader?.nickname || t("unknown")}</span>
+                      <span className="text-muted-foreground text-xs">→</span>
+                      <span className="text-muted-foreground">{tx.borrower?.nickname || tx.borrower_id.slice(0, 12)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>
                           {t(cfg.labelKey)}
                         </span>
-                      </td>
-                      <td className="p-4"><span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(tx.created_at).toLocaleDateString()}</span></td>
-                      <td className="p-4">
-                        <Link
-                          href={`/admin/transactions/${tx.id}`}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        >
-                          <Icon name="chevron-right" size={18} />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

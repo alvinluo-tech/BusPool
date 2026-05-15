@@ -185,126 +185,105 @@ export default function AdminUsersPage() {
           <Icon name="loader" size={32} className="text-muted-foreground" />
         </div>
       ) : (
-        <div className="bg-card rounded-xl overflow-x-auto border border-border">
-          <table className="w-full">
-            <thead className="border-b border-border">
-              <tr>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("user")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("reputation")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("points")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("stats")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("status")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("registrationDate")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.length === 0 ? (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-card rounded-xl overflow-x-auto border border-border">
+            <table className="w-full">
+              <thead className="border-b border-border">
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="text-center py-12 text-sm text-muted-foreground"
-                  >
-                    {t("noUsersFound")}
-                  </td>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("user")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("reputation")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("points")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("stats")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("registrationDate")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("actions")}</th>
                 </tr>
-              ) : (
-                filtered.map((user) => {
-                  const successRate =
-                    user.total_borrows > 0
-                      ? `${Math.round(
-                          (user.successful_uses / user.total_borrows) * 100,
-                        )}%`
-                      : "N/A";
-                  return (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium shrink-0">
-                            {user.nickname.charAt(0).toUpperCase()}
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-sm text-muted-foreground">{t("noUsersFound")}</td>
+                  </tr>
+                ) : (
+                  filtered.map((user) => {
+                    const successRate = user.total_borrows > 0 ? `${Math.round((user.successful_uses / user.total_borrows) * 100)}%` : "N/A";
+                    return (
+                      <tr key={user.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium shrink-0">{user.nickname.charAt(0).toUpperCase()}</div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground text-sm truncate">{user.nickname}</p>
+                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground text-sm truncate">
-                              {user.nickname}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {user.email}
-                            </p>
+                        </td>
+                        <td className="p-4"><RepBadge value={user.reputation} /></td>
+                        <td className="p-4"><span className="font-semibold text-foreground">{user.points_balance}</span></td>
+                        <td className="p-4">
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            <span className="font-medium text-foreground">{user.total_uploads}</span>
+                            <span className="mx-1">/</span>
+                            <span className="font-medium text-foreground">{user.total_borrows}</span>
+                            <span className="mx-1">/</span>
+                            <span className={user.total_borrows > 0 ? "text-success" : "text-muted-foreground"}>{successRate}</span>
+                          </span>
+                        </td>
+                        <td className="p-4"><StatusBadge status={deriveStatus(user.reputation)} /></td>
+                        <td className="p-4"><span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(user.created_at).toLocaleDateString()}</span></td>
+                        <td className="p-4">
+                          <div className="flex justify-end">
+                            <Link href={`/admin/users/${user.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                              <Icon name="chevron-right" size={16} />
+                              {t("view")}
+                            </Link>
                           </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <RepBadge value={user.reputation} />
-                      </td>
-                      <td className="p-4">
-                        <span className="font-semibold text-foreground">
-                          {user.points_balance}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          <span className="font-medium text-foreground">
-                            {user.total_uploads}
-                          </span>
-                          <span className="mx-1">/</span>
-                          <span className="font-medium text-foreground">
-                            {user.total_borrows}
-                          </span>
-                          <span className="mx-1">/</span>
-                          <span
-                            className={
-                              user.total_borrows > 0
-                                ? "text-success"
-                                : "text-muted-foreground"
-                            }
-                          >
-                            {successRate}
-                          </span>
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <StatusBadge status={deriveStatus(user.reputation)} />
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-end">
-                          <Link
-                            href={`/admin/users/${user.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                          >
-                            <Icon name="chevron-right" size={16} />
-                            {t("view")}
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <div className="bg-card border border-border rounded-xl text-center py-12 text-sm text-muted-foreground">{t("noUsersFound")}</div>
+            ) : (
+              filtered.map((user) => {
+                const successRate = user.total_borrows > 0 ? `${Math.round((user.successful_uses / user.total_borrows) * 100)}%` : "N/A";
+                const status = deriveStatus(user.reputation);
+                return (
+                  <Link key={user.id} href={`/admin/users/${user.id}`} className="block bg-card border border-border rounded-xl p-4 active:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium shrink-0">{user.nickname.charAt(0).toUpperCase()}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground text-sm truncate">{user.nickname}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                      <StatusBadge status={status} />
+                    </div>
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      <RepBadge value={user.reputation} />
+                      <span className="text-muted-foreground">·</span>
+                      <span className="font-semibold text-foreground">{user.points_balance} <span className="text-xs text-muted-foreground font-normal">{t("points")}</span></span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-3">
+                      {t("uploads")}: {user.total_uploads} / {t("borrows")}: {user.total_borrows} / {successRate}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{new Date(user.created_at).toLocaleDateString()}</span>
+                      <Icon name="chevron-right" size={16} className="text-muted-foreground" />
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </>
       )}
     </div>
   );

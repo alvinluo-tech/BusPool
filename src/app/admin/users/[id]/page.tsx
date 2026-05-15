@@ -82,7 +82,7 @@ function AdjustPointsDialog({ open, onClose, userId, onDone }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2">
+      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2 max-h-[85vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-foreground mb-4">{t("adjustPoints")}</h3>
         <div className="space-y-4">
           <div>
@@ -153,7 +153,7 @@ function AdjustReputationDialog({ open, onClose, userId, onDone }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2">
+      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2 max-h-[85vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-foreground mb-4">{t("adjustReputation")}</h3>
         <div className="space-y-4">
           <div>
@@ -227,7 +227,7 @@ function ChangeStatusDialog({ open, onClose, userId, currentRep, onDone }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2">
+      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2 max-h-[85vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-foreground mb-4">{t("changeStatus")}</h3>
         <div className="space-y-4">
           <div>

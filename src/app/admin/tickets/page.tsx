@@ -198,107 +198,99 @@ export default function AdminTicketsPage() {
           <Icon name="loader" size={32} className="text-muted-foreground" />
         </div>
       ) : (
-        <div className="bg-card rounded-xl overflow-x-auto border border-border">
-          <table className="w-full">
-            <thead className="border-b border-border">
-              <tr>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("ticketId")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("uploader")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("type")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("status")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("borrowCount")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("uploadTime")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("expiryTime")}
-                </th>
-                <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  {t("actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.length === 0 ? (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-card rounded-xl overflow-x-auto border border-border">
+            <table className="w-full">
+              <thead className="border-b border-border">
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center py-12 text-sm text-muted-foreground"
-                  >
-                    {t("noTicketsFound")}
-                  </td>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("ticketId")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("uploader")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("type")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("status")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("borrowCount")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("uploadTime")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("expiryTime")}</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground whitespace-nowrap">{t("actions")}</th>
                 </tr>
-              ) : (
-                filtered.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="hover:bg-muted/50 transition-colors"
-                  >
-                    <td className="p-4">
-                      <span className="font-mono text-sm text-muted-foreground">
-                        {ticket.id.slice(0, 8)}...
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      {ticket.uploader ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
-                            {ticket.uploader.nickname}
-                          </span>
-                          <RepBadge value={ticket.uploader.reputation} />
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {t("unknown")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <TypeBadge type={ticket.ticket_type} />
-                    </td>
-                    <td className="p-4">
-                      <TicketStatusBadge status={ticket.status} />
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm text-muted-foreground">{borrowCounts[ticket.id] || 0}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">
-                        {new Date(ticket.created_at).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">
-                        {new Date(ticket.expires_at).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex justify-end">
-                        <Link
-                          href={`/admin/tickets/${ticket.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                        >
-                          <Icon name="chevron-right" size={16} />
-                          {t("view")}
-                        </Link>
-                      </div>
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-sm text-muted-foreground">{t("noTicketsFound")}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filtered.map((ticket) => (
+                    <tr key={ticket.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="p-4"><span className="font-mono text-sm text-muted-foreground">{ticket.id.slice(0, 8)}...</span></td>
+                      <td className="p-4">
+                        {ticket.uploader ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground">{ticket.uploader.nickname}</span>
+                            <RepBadge value={ticket.uploader.reputation} />
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">{t("unknown")}</span>
+                        )}
+                      </td>
+                      <td className="p-4"><TypeBadge type={ticket.ticket_type} /></td>
+                      <td className="p-4"><TicketStatusBadge status={ticket.status} /></td>
+                      <td className="p-4"><span className="text-sm text-muted-foreground">{borrowCounts[ticket.id] || 0}</span></td>
+                      <td className="p-4"><span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(ticket.created_at).toLocaleDateString()}</span></td>
+                      <td className="p-4"><span className="text-sm text-muted-foreground whitespace-nowrap">{new Date(ticket.expires_at).toLocaleDateString()}</span></td>
+                      <td className="p-4">
+                        <div className="flex justify-end">
+                          <Link href={`/admin/tickets/${ticket.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                            <Icon name="chevron-right" size={16} />
+                            {t("view")}
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <div className="bg-card border border-border rounded-xl text-center py-12 text-sm text-muted-foreground">{t("noTicketsFound")}</div>
+            ) : (
+              filtered.map((ticket) => (
+                <Link key={ticket.id} href={`/admin/tickets/${ticket.id}`} className="block bg-card border border-border rounded-xl p-4 active:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm text-foreground">#{ticket.id.slice(0, 8)}</span>
+                      <TypeBadge type={ticket.ticket_type} />
+                    </div>
+                    <TicketStatusBadge status={ticket.status} />
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    {ticket.uploader ? (
+                      <>
+                        <span className="text-sm text-foreground font-medium">{ticket.uploader.nickname}</span>
+                        <RepBadge value={ticket.uploader.reputation} />
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">{t("unknown")}</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mb-3">
+                    {t("borrowCount")}: {borrowCounts[ticket.id] || 0}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      <p>{new Date(ticket.created_at).toLocaleDateString()} – {new Date(ticket.expires_at).toLocaleDateString()}</p>
+                    </div>
+                    <Icon name="chevron-right" size={16} className="text-muted-foreground" />
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );

@@ -53,7 +53,7 @@ export default function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
@@ -71,7 +71,7 @@ export default function Dialog({
       >
         {/* Header */}
         {(title || description) && (
-          <div className="px-6 pt-6 pb-2">
+          <div className="px-4 pt-5 pb-2 sm:px-6 sm:pt-6">
             {title && (
               <h2 className="text-xl font-semibold text-foreground">{title}</h2>
             )}
@@ -90,7 +90,7 @@ export default function Dialog({
         </button>
 
         {/* Body */}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

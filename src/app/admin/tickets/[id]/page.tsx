@@ -116,7 +116,7 @@ function RemoveTicketDialog({ open, onClose, ticketId, onRemoved }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2">
+      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-level2 max-h-[85vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-foreground mb-2">{t("forceRemoveTicket")}</h3>
         <p className="text-sm text-muted-foreground mb-4">{t("forceRemoveDesc")}</p>
         <div className="space-y-4">

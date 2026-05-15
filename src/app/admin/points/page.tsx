@@ -229,7 +229,7 @@ export default function AdminPointsPage() {
               </Button>
             </div>
 
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-2 flex-wrap">
               {[-50, -10, -5, 5, 10, 50].map((v) => (
                 <button
                   key={v}

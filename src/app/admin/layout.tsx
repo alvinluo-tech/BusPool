@@ -2,9 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import Icon from "@/components/ui/Icon";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import type { IconName } from "@/components/ui/Icon";
 
 const sidebarItems = [
@@ -17,21 +19,14 @@ const sidebarItems = [
   { key: "logs", href: "/admin/logs", icon: "file-text" as IconName },
 ];
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const t = useTranslations("admin");
-  const tc = useTranslations("common");
-  const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+interface NavLinksProps {
+  pathname: string;
+  t: (key: string) => string;
+  closeMenu: () => void;
+}
 
-  const closeMenu = useCallback(() => setMenuOpen(false), []);
-
-  const currentPage = sidebarItems.find((item) => item.href === pathname);
-
-  const NavLinks = () => (
+function NavLinks({ pathname, t, closeMenu }: NavLinksProps) {
+  return (
     <>
       {sidebarItems.map((item) => {
         const isActive = pathname === item.href;
@@ -53,6 +48,72 @@ export default function AdminLayout({
       })}
     </>
   );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
+  const pathname = usePathname();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [adminChecked, setAdminChecked] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("users")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+      setAdminChecked(profile?.is_admin ?? false);
+    };
+    checkAdmin();
+  }, [router]);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  // Loading — admin status not yet determined
+  if (adminChecked === null) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // Not admin — show unauthorized
+  if (!adminChecked) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+            <Icon name="alert" size={28} className="text-destructive" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">{t("unauthorized")}</h2>
+          <p className="text-sm text-muted-foreground mb-6">{t("unauthorizedDesc")}</p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <Icon name="chevron-left" size={16} />
+            {tc("back")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const currentPage = sidebarItems.find((item) => item.href === pathname);
 
   return (
     <div className="min-h-screen bg-bg flex">
@@ -65,7 +126,7 @@ export default function AdminLayout({
         </div>
 
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-          <NavLinks />
+          <NavLinks pathname={pathname} t={t} closeMenu={closeMenu} />
         </nav>
 
         <div className="border-t border-border p-4 shrink-0">
@@ -130,7 +191,7 @@ export default function AdminLayout({
             </div>
 
             <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-              <NavLinks />
+              <NavLinks pathname={pathname} t={t} closeMenu={closeMenu} />
             </nav>
 
             <div className="border-t border-border p-4 shrink-0">

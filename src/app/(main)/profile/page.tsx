@@ -29,7 +29,6 @@ function ReputationBadge({ reputation, labels }: { reputation: number; labels: R
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
-  const tCommon = useTranslations("common");
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -184,13 +183,15 @@ export default function ProfilePage() {
         </Link>
       </Card>
 
-      {/* Admin Button */}
-      <Link href="/admin" className="block">
-        <Button variant="primary" size="lg" className="w-full">
-          <Icon name="grid" size={20} />
-          {t("adminPanel")}
-        </Button>
-      </Link>
+      {/* Admin Button — only visible to admins */}
+      {user?.is_admin && (
+        <Link href="/admin" className="block">
+          <Button variant="primary" size="lg" className="w-full">
+            <Icon name="grid" size={20} />
+            {t("adminPanel")}
+          </Button>
+        </Link>
+      )}
 
       {/* Sign Out */}
       <button

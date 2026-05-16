@@ -42,7 +42,6 @@ yarn-error.log*
 !CLAUDE.md
 !.claude/*.md
 !README.md
-!docs/bugs/*.md
 
 # local settings
 .claude/settings.local.json

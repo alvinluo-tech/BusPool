@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Icon from "@/components/ui/Icon";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import type { IconName } from "@/components/ui/Icon";
 
 const sidebarItems = [
@@ -16,6 +17,7 @@ const sidebarItems = [
   { key: "transactions", href: "/admin/transactions", icon: "activity" as IconName },
   { key: "appeals", href: "/admin/appeals", icon: "alert" as IconName },
   { key: "points", href: "/admin/points", icon: "dollar" as IconName },
+  { key: "announcements", href: "/admin/announcements", icon: "bell" as IconName },
   { key: "logs", href: "/admin/logs", icon: "file-text" as IconName },
 ];
 
@@ -119,10 +121,11 @@ export default function AdminLayout({
     <div className="min-h-screen bg-bg flex">
       {/* Sidebar — Desktop (lg+) */}
       <aside className="w-64 bg-card border-r border-border hidden lg:flex flex-col fixed left-0 top-0 h-full z-30">
-        <div className="h-16 flex items-center px-6 border-b border-border shrink-0">
+        <div className="h-16 flex items-center px-6 border-b border-border shrink-0 justify-between">
           <h2 className="text-lg font-semibold text-foreground">
             {tc("appName")}
           </h2>
+          <NotificationBell />
         </div>
 
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
@@ -154,7 +157,7 @@ export default function AdminLayout({
           <h1 className="flex-1 text-center text-sm font-semibold text-foreground truncate px-2">
             {currentPage ? t(currentPage.key) : tc("appName")}
           </h1>
-          <div className="w-10" />
+          <NotificationBell />
         </div>
 
         <div className="max-w-6xl mx-auto p-4 lg:p-8">{children}</div>

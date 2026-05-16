@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Icon from "@/components/ui/Icon";
 import type { IconName } from "@/components/ui/Icon";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function MainLayout({
   children,
@@ -13,6 +14,7 @@ export default function MainLayout({
 }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const tc = useTranslations("common");
 
   const navItems = [
     { label: t("home"), href: "/", icon: "home" as IconName },
@@ -24,8 +26,16 @@ export default function MainLayout({
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
+      {/* Thin top bar — app name + notification bell, scrolls with content */}
+      <div className="max-w-lg mx-auto w-full px-4 h-10 flex items-center justify-between shrink-0">
+        <span className="text-base font-bold text-foreground">
+          {tc("appName")}
+        </span>
+        <NotificationBell />
+      </div>
+
       {/* Content */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6 pb-24">
+      <main className="flex-1 max-w-lg mx-auto w-full px-4 pb-24">
         {children}
       </main>
 

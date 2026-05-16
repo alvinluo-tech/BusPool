@@ -137,13 +137,24 @@ export interface AdminLog {
 export interface Notification {
   id: string;
   user_id: string;
-  type: string;
+  type: NotificationType;
   title: string;
-  body: string;
-  data: Json | null;
+  message: string;
+  link: string | null;
   read: boolean;
   created_at: string;
 }
+
+export type NotificationType =
+  | "ticket_borrowed"
+  | "ticket_expiring"
+  | "confirm_result"
+  | "appeal_result"
+  | "points_received"
+  | "reputation_changed"
+  | "reputation_milestone"
+  | "low_reputation"
+  | "announcement";
 
 export type PointRecordType =
   | "welcome_bonus"
@@ -188,9 +199,8 @@ export interface QuietHours {
 }
 
 export interface NotificationPreferences {
-  newTickets: boolean;
-  ticketExpiring: boolean;
   ticketUsed: boolean;
+  ticketExpiring: boolean;
   reputationChanges: boolean;
   reputationMilestones: boolean;
   lowReputationWarning: boolean;
@@ -198,7 +208,6 @@ export interface NotificationPreferences {
   appealUpdates: boolean;
   confirmationReminders: boolean;
   announcements: boolean;
-  tipsSuggestions: boolean;
 }
 
 export interface UserPreferences {

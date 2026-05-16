@@ -5,9 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { UserPreferences, NotificationPreferences } from "@/types";
 
 const defaultNotifications: NotificationPreferences = {
-  newTickets: true,
-  ticketExpiring: true,
   ticketUsed: true,
+  ticketExpiring: true,
   reputationChanges: true,
   reputationMilestones: true,
   lowReputationWarning: true,
@@ -15,7 +14,6 @@ const defaultNotifications: NotificationPreferences = {
   appealUpdates: true,
   confirmationReminders: true,
   announcements: true,
-  tipsSuggestions: false,
 };
 
 function defaultPrefs(userId: string): UserPreferences {

@@ -26,7 +26,6 @@ const sections: NotificationSection[] = [
     icon: "bell",
     labelKey: "ticketNotifications",
     items: [
-      { key: "newTickets", titleKey: "newTicketsAvailable", descKey: "newTicketsAvailableDesc", defaultOn: true },
       { key: "ticketExpiring", titleKey: "ticketExpiringSoon", descKey: "ticketExpiringSoonDesc", defaultOn: true },
       { key: "ticketUsed", titleKey: "yourTicketUsed", descKey: "yourTicketUsedDesc", defaultOn: true },
     ],
@@ -54,7 +53,6 @@ const sections: NotificationSection[] = [
     labelKey: "systemNotifications",
     items: [
       { key: "announcements", titleKey: "announcements", descKey: "announcementsDesc", defaultOn: true },
-      { key: "tipsSuggestions", titleKey: "tipsSuggestions", descKey: "tipsSuggestionsDesc", defaultOn: false },
     ],
   },
 ];
